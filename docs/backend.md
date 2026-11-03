@@ -1,10 +1,10 @@
-# RFPI HTTP 接口
+# Unveil 后端 HTTP 接口
 
-Unveil 是 RFPI 的设备端客户端。RFPI 负责扫描、采集、分类和历史，Unveil 按接口返回的数值绘图。仓库包含固件和协议说明。完整扫描需要运行兼容的 RFPI 后端。
+Unveil Panel 通过 HTTP 连接 Unveil 后端。后端执行扫描、采集和分类，并保存历史记录。面板发送操作指令，显示进度，并根据接口返回的数值绘制图表。使用扫描和结果查询功能需要运行兼容的 Unveil 后端。
 
 ## 连接
 
-在 **系统 → 服务地址** 输入根地址，例如 `https://rfpi.example.com` 或 `http://192.0.2.10:8788`。支持域名、IPv4 和可选端口。HTTPS 使用固件内置的 CA 信任列表。设备请求 JSON，POST 使用 `Content-Type: application/json`。状态响应体上限 60,000 字节，图表和历史响应体上限 65,535 字节。
+在 **系统 → 服务地址** 输入根地址，例如 `https://unveil.example.com` 或 `http://192.0.2.10:8788`。支持域名、IPv4 和可选端口。HTTPS 使用固件内置的 CA 信任列表。设备请求 JSON，POST 使用 `Content-Type: application/json`。状态响应体上限 60,000 字节，图表和历史响应体上限 65,535 字节。
 
 | 方法 | 路径 | 响应 |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ Unveil 是 RFPI 的设备端客户端。RFPI 负责扫描、采集、分类和�
 ## 开始任务
 
 ```sh
-curl -X POST https://rfpi.example.com/api/device/start \
+curl -X POST https://unveil.example.com/api/device/start \
   -H 'Content-Type: application/json' \
   -d '{"mode":"scan","capture_seconds":2,"analysis_seconds":2,"discovery_min_rounds":3}'
 ```
@@ -33,7 +33,7 @@ curl -X POST https://rfpi.example.com/api/device/start \
 | `analysis_seconds` | 分析档位为 0.5、1、2、5、10 秒。圆盘选 0 时发送 `mode: "collect"` 和兼容值 `analysis_seconds: 2` |
 | `discovery_min_rounds` | 最少扫描轮数，取 1、3、5 |
 
-如果后端已有任务或正在下载，RFPI 可返回 HTTP 409。参数无效时返回 HTTP 400。错误响应可带 `error` 字符串。
+如果后端已有任务或正在下载，Unveil 后端可返回 HTTP 409。参数无效时返回 HTTP 400。错误响应可带 `error` 字符串。
 
 ## 状态和进度
 
@@ -96,4 +96,4 @@ curl -X POST https://rfpi.example.com/api/device/start \
 
 ## 测试模式
 
-由 RFPI 切换，设备继续使用相同端点。后端从已有采集数据模拟新任务的进度，状态带 `test: true`。测试结果独立保存，下一次测试替换已结束结果，结束后 900 秒清理。历史接口只返回真实任务。 [清理策略参考](reference/unveil_test_retention.py)
+由 Unveil 后端切换，设备继续使用相同端点。后端从已有采集数据模拟新任务的进度，状态带 `test: true`。测试结果独立保存，下一次测试替换已结束结果，结束后 900 秒清理。历史接口只返回真实任务。 [清理策略参考](reference/unveil_test_retention.py)

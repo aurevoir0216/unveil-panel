@@ -1,6 +1,6 @@
-# Unveil Idea for Mosaico
+# Unveil Panel for ESP-Mosaico
 
-This app uses ../mosaico-core for the independent UI/runtime, adding official ESP-Iris/Vibe Mode integration. It installs as .irisfw and runs as the selected native application, rather than inside Works.
+This Vibe Mode Idea is a handheld control panel for the Unveil backend. Connect the panel to a running Unveil server to start scans and view progress, charts, and history. The server handles RF capture and analysis. The panel uses the shared UI and runtime in `../mosaico-core` and installs as an `.irisfw` bundle.
 
 ## Build
 
