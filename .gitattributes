@@ -1,0 +1,3 @@
+# Preserve formatting in the copied upstream renderer and font license.
+firmware/mosaico-core/render_overrides/lvgl__lvgl/src/libs/thorvg/tvgSwRle.cpp -whitespace
+firmware/mosaico-core/resources/apps/unveil/assets/Doto-OFL.txt -whitespace

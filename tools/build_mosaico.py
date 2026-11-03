@@ -17,7 +17,7 @@ def run(command, cwd, env):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('variant', choices=['standalone', 'desktop', 'idea'])
+    parser.add_argument('variant', choices=['desktop', 'idea'])
     args = parser.parse_args()
     if sys.version_info < (3, 10):
         parser.error('Use Python 3.10+ from the exported ESP-IDF environment')
@@ -35,9 +35,6 @@ def main():
         if not (project / 'sdkconfig').exists():
             shutil.copy2(project / 'sdkconfig.release', project / 'sdkconfig')
         run(['idf.py', '-B', 'build-desktop', '-DESP_MOSAICO_BUILD_PROFILE=profiles/desktop.cmake', 'build'], project, env)
-    elif args.variant == 'standalone':
-        project = repo / 'firmware/mosaico-standalone'
-        run(['idf.py', 'build'], project, env)
     else:
         project = repo / 'firmware/mosaico-idea'
         run(['git', 'submodule', 'update', '--init', '--recursive', '--',

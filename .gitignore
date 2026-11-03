@@ -10,3 +10,4 @@ __pycache__/
 **/ui-status.json
 
 !firmware/mosaico-standalone/resources/apps/unveil/config.json
+!firmware/mosaico-core/resources/apps/unveil/config.json

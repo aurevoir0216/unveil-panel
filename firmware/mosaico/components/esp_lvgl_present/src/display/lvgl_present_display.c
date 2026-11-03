@@ -359,6 +359,11 @@ static esp_err_t frame_flush(esp_lv_adapter_display_node_t *node,
         .x = area->x1,
         .y = area->y1,
     };
+    if (node->cfg.observe_region) {
+        const lv_area_t observed = {area->x1, area->y1, area->x2, area->y2};
+        node->cfg.observe_region(node->lv_disp, &observed, pixels, stride_bytes,
+                                 node->cfg.observe_user_ctx);
+    }
     result = present_submit_region(node, &rendered);
     if (result != ESP_OK) {
         result = fail_frame(node, result);
@@ -801,6 +806,8 @@ lv_display_t *lvgl_present_display_register(
     node->cfg.render_alignment = presenter_cfg->render_alignment;
     node->cfg.validate_generation = presenter_cfg->validate_generation;
     node->cfg.validation_user_ctx = presenter_cfg->validation_user_ctx;
+    node->cfg.observe_region = presenter_cfg->observe_region;
+    node->cfg.observe_user_ctx = presenter_cfg->observe_user_ctx;
 
     if (!init_display_node(node)) {
         lvgl_present_destroy_node(node);

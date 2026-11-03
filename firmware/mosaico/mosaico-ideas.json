@@ -1,22 +1,38 @@
 {
   "schema": "mosaico-ideas/project-release/1",
   "project": {
-    "title": "ESP-MOSAICO-CLAW",
-    "categories": ["communication", "display", "audio"]
+    "title": "Unveil Desktop",
+    "categories": [
+      "display",
+      "communication"
+    ],
+    "license": "Apache-2.0"
   },
-  "website": {"readme": "README.md"},
+  "firmware": "build-desktop/unveil-desktop.irisfw",
+  "website": {
+    "readme": "README.md",
+    "attachments": [
+      "ideas-assets/Noto-OFL.txt",
+      "ideas-assets/Apache-2.0.txt",
+      "ideas-assets/Third-party.md"
+    ]
+  },
   "device": {
     "default_locale": "zh-CN",
     "presentations": {
       "zh-CN": {
-        "name": "Mosaico 智能助手",
-        "description": "支持语音交互、相机和触屏应用。",
-        "font": "fatfs_image/system/fonts/NotoSansSC-Regular-sub.ttf"
+        "mode": "generate",
+        "name": "Unveil Desktop",
+        "description": "采集 分析 图表 历史",
+        "font": "ideas-assets/Unveil-Text-Readable.ttf",
+        "icon": "ideas-assets/icon.png"
       },
       "en": {
-        "name": "Mosaico Claw",
-        "description": "AI assistant with voice, camera and touchscreen apps.",
-        "font": "components/mosaic_ui/common/fonts/NotoSans-Regular.ttf"
+        "mode": "generate",
+        "name": "Unveil Desktop",
+        "description": "RF scan and charts",
+        "font": "ideas-assets/Unveil-Text-Readable.ttf",
+        "icon": "ideas-assets/icon.png"
       }
     }
   }

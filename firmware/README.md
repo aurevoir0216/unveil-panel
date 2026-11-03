@@ -1,8 +1,9 @@
-# Platform firmware
+# Mosaico firmware
 
-ESP-Mosaico currently has three distributions:
-- `mosaico-standalone/`: independent ESP-IDF/LVGL application and runtime.
-- `mosaico/`: original Mosaico shell with an Unveil desktop app.
-- `mosaico-idea/`: independent UI core plus retained Vibe Mode/ESP-Iris integration.
+Two maintained distributions retain the original bootloader and Vibe Mode:
+- `mosaico-idea/`: boot directly into the independent Unveil runtime.
+- `mosaico/`: original Mosaico desktop with a circular Unveil app icon.
 
-The Works download variant was cancelled. These are different run/install forms for one hardware platform, not three different boards. Future hardware receives separate adapters, configuration and install contracts. New variants are build candidates until hardware acceptance is recorded.
+`mosaico-core/` owns the maintained independent runtime, board adapter and UI resources. Idea is a distribution mechanism; the desktop firmware can also be submitted as an Idea when its app resources install automatically.
+
+`mosaico-standalone/` is the frozen historical full-Flash project. Keep its source unchanged; do not build new releases or attach its binaries to GitHub Releases. Works downloads remain cancelled.

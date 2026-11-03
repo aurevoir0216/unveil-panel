@@ -2,24 +2,26 @@
 
 射频采集与分析的触摸界面。设备处理交互与图表绘制，树莓派提供采集、分析、进度和历史数据。
 
-当前硬件：**ESP-Mosaico / ESP32-S31 / 480 × 480**。提供三种运行形式，不提供独立的 Works 下载版。
+当前硬件：**ESP-Mosaico / ESP32-S31 / 480 × 480**。维护两种运行形式：
 
 | 版本 | 运行方式 | 工程 |
 | --- | --- | --- |
-| Standalone 独立固件 | ESP-IDF + LVGL + 自有 Lua/任务/网络运行层，没有 Mosaico-Claw 框架 | [mosaico-standalone](firmware/mosaico-standalone/) |
-| Desktop 桌面应用固件 | 保留原 Mosaico 桌面，点击圆形 Unveil 图标打开应用 | [mosaico](firmware/mosaico/) |
-| Idea 应用包 | 使用 Vibe Mode 安装 `.irisfw`，切换进入 Unveil | [mosaico-idea](firmware/mosaico-idea/) |
+| Idea 独立运行版 | 保留原厂引导与 Vibe Mode，开机直接进入 Unveil，不加载 Mosaico 桌面或 Claw 框架 | [mosaico-idea](firmware/mosaico-idea/) |
+| Desktop 桌面应用版 | 保留 Mosaico 桌面，通过圆形 Unveil 图标打开 | [mosaico](firmware/mosaico/) |
 
-**三个版本仍为构建候选版，尚未全部完成真机验收。** 桌面版已完成本地界面、调节、排序、语言、声音设置和退出重开的真机检查；Idea 已验证内存修复后的启动。本轮已读到真实接口的在线、采集状态及历史，完整结果图表与完成反馈流程仍待复测。
+Idea 是安装与分发方式。桌面固件也可打包成 Idea：Vibe Mode 更新固件后，由桌面固件自行安装配套脚本、字体和图标。六位下载编号需要在官方 Ideas 平台创建并发布应用；本地 `.irisfw` 文件本身不产生编号。
+
+**全盘独立版停止更新，源码保留在 [mosaico-standalone](firmware/mosaico-standalone/)，不再提供 Release 附件。** 活跃的 Idea 版使用 [mosaico-core](firmware/mosaico-core/)；后续修复不写回被冻结的全盘工程。
+
+Idea 版现复用桌面版的显示合成与刷屏同步，开机直接进入 Unveil。真机已通过顶部按钮扫描、树莓派完整进度与图表、连续 25 次翻页、圆盘、主题／语言切换和完整资源更新后的设置保留；用户确认雷达闪烁与错位已消失。桌面版新增资源自安装仍待真机验收，发布包继续按候选管理。
 
 ![Unveil 雷达](docs/images/radar.png)
 
 ## 下载
 
-从 [Releases](https://github.com/aurevoir0216/unveil/releases) 下载带 `standalone`、`desktop`、`idea` 名称的文件。标题使用 `Unveil v0.xx`，不单独附带 SHA256 下载文件。
+从 [Releases](https://github.com/aurevoir0216/unveil/releases) 下载带 `desktop` 或 `idea` 名称的文件。标题使用 `Unveil v0.xx`，不单独附带 SHA256 下载文件。
 
-- 独立版 ZIP 包含自己的启动器、分区表、主程序、资源与工厂镜像，安装会替换原 Mosaico Flash 布局。
-- 桌面版 ZIP 包含框架应用升级包和 NAND 配套脚本、字体与上传工具。
+- 桌面版 ZIP 包含固件与开发用资源上传工具；新版固件在启动时自行补齐桌面应用资源，保留已有设置。
 - Idea 为官方格式 `.irisfw` 安装包；提供文件不代表已上架官方 Ideas 商店或获得六位编号。
 
 旧 `v0.10 / v0.11` 是基于 Mosaico 框架的专用启动版本，不能当作完全独立固件。
@@ -28,7 +30,7 @@
 
 保留原生 LVGL 雷达、径向等宽圆盘、三类图表、实时历史、语言、主题、静音及音量设置。图表准备计入总进度；100% 呈现结果后才播放完成声音和振动。历史排序使用居中的点阵 `NEWEST / OLDEST`，不随语言切换。
 
-三版顶部按钮都先回首页并停稳，再同步启动扫描动画与震动。桌面版应用内 Wi-Fi 只显示连接状态，配置使用 Mosaico 系统设置。
+两个维护版本的顶部按钮都先回首页并停稳，再同步启动扫描动画与震动。桌面版应用内 Wi-Fi 只显示连接状态，配置使用 Mosaico 系统设置。
 
 Wi-Fi 和服务地址默认留空，由使用者配置。发布包不包含个人 NVS、历史、采集数据或模型权重。后端协议见 [backend.md](docs/backend.md)。
 
@@ -38,11 +40,10 @@ Wi-Fi 和服务地址默认留空，由使用者配置。发布包不包含个�
 
 ```bash
 source /path/to/esp-idf/export.sh
-python tools/build_mosaico.py standalone
 python tools/build_mosaico.py desktop
 python tools/build_mosaico.py idea
 ```
 
 构建工具只编译，不自动安装或烧录。后续硬件也使用自己的目录、配置和安装契约。
 
-独立版复用了 Apache-2.0 的硬件 BSP 和部分 Lua/LVGL 绑定代码，但不链接 ESP-Claw 系统运行层。来源见 [THIRD_PARTY.md](THIRD_PARTY.md)，字体许可证随资源提供。
+独立运行核心复用了 Apache-2.0 的硬件 BSP 和部分 Lua/LVGL 绑定代码，但不链接 ESP-Claw 系统运行层。来源见 [THIRD_PARTY.md](THIRD_PARTY.md)，字体许可证随资源提供。

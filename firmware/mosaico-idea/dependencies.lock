@@ -100,6 +100,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.6.2
+  espressif/esp_display_present:
+    component_hash: 62a9adc2e438164bd65ed432ac48604238cd41978fff3890b8d1b6743966fcde
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=6.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.2.0
   espressif/esp_lcd_co5300:
     component_hash: 1a5cbaa0069c3c72c238e5a1eb32ec9dd390ec1c7c46b24bf44b9037f2fe6c56
     dependencies:
@@ -121,7 +131,7 @@ dependencies:
       require: private
       version: '>=4.4.2'
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.2.1
   espressif/esp_lcd_touch_cst9220:
@@ -254,7 +264,9 @@ direct_dependencies:
 - espressif/button
 - espressif/cjson
 - espressif/esp_codec_dev
+- espressif/esp_display_present
 - espressif/esp_lcd_co5300
+- espressif/esp_lcd_touch
 - espressif/esp_lcd_touch_cst9220
 - espressif/esp_tinyusb
 - espressif/lua
@@ -263,6 +275,6 @@ direct_dependencies:
 - idf
 - joltwallet/littlefs
 - lvgl/lvgl
-manifest_hash: 331aeb9a9453f5bd2b551f24297f8bb0e2d3a2b2896f22f64063be47f430d5d1
+manifest_hash: 8f4404652fde4ab6357d3ab1643d1d04832090bb85aecc580f0f8a78ba59df93
 target: esp32s31
 version: 3.0.0

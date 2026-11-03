@@ -26,6 +26,7 @@ extern esp_err_t app_claw_cli_start(claw_hw_registry_handle_t registry);
 #include <stdio.h>
 #include "wifi_manager.h"
 #include "unveil_wifi.h"
+#include "unveil_seed.h"
 #include "unveil_sound.h"
 #if CONFIG_APP_CLAW_MOSAIC_GSP_ENABLE
 #include "cap_im_ai_create.h"
@@ -943,6 +944,13 @@ void mosaico_compat_app_main(void)
         ESP_ERROR_CHECK(app_factory_reset_complete());
         ESP_LOGW(TAG, "Factory data reset complete");
     }
+
+    /* Vibe Mode installs the firmware; this normal application seeds its own
+     * desktop resources before the launcher enumerates NAND apps. */
+#ifdef UNVEIL_DESKTOP_BUILD
+    ESP_ERROR_CHECK(app_fs_wait_recovery());
+    ESP_ERROR_CHECK_WITHOUT_ABORT(unveil_seed_bootstrap());
+#endif
 
     /* Publish the resolved storage roots so any component can compose paths
      * without knowing whether data lives on flash or an SD card. */

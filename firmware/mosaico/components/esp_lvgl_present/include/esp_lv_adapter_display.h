@@ -66,6 +66,11 @@ typedef struct {
     esp_display_present_render_alignment_t render_alignment;
     bool (*validate_generation)(void *user_ctx, uint32_t generation);
     void *validation_user_ctx;
+    /** Optional native-pixel observer for on-demand screen diagnostics.
+     * Runs under the display lock before the region lease is submitted. */
+    void (*observe_region)(lv_display_t *display, const lv_area_t *area,
+                           const void *pixels, size_t stride_bytes, void *user_ctx);
+    void *observe_user_ctx;
 } esp_lv_adapter_presenter_config_t;
 
 lv_display_t *esp_lv_adapter_register_display_with_presenter(

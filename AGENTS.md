@@ -1,7 +1,7 @@
 # Project conventions
 
-- Maintain three Mosaico distributions: standalone firmware, framework desktop app firmware, and Vibe Mode Idea .irisfw. A standalone Works download was explicitly cancelled.
-- Standalone must not start or link the Mosaico-Claw application/service framework. Credit reused board drivers and low-level UI bindings.
+- Maintain two active Mosaico distributions: framework desktop app firmware and the independent Unveil Idea .irisfw that retains Vibe Mode. The full-Flash project in mosaico-standalone is frozen: keep its source, do not update it and do not attach its artifacts to GitHub Releases. A standalone Works download was explicitly cancelled.
+- The Idea application uses mosaico-core and must not start or link the Mosaico-Claw application/service framework. Credit reused board drivers and low-level UI bindings.
 - Desktop boots Mosaico and launches Unveil from its icon. Secondary pages retain swipe-up Back; primary-page shell exit and display handoff remain available.
 - Idea follows the retained Vibe Mode integration contract. Never rename a raw binary or ZIP to .irisfw.
 - Never package personal Wi-Fi credentials, personal server addresses, device NVS, user history or captures. Service defaults remain blank.

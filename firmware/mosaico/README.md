@@ -19,7 +19,9 @@ UNVEIL_DISTRIBUTION defaults to desktop. The old dedicated entry remains for leg
 
 ## Installation
 
-The desktop ZIP includes a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow, then upload the NAND app:
+The desktop ZIP includes a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow. The normal desktop firmware installs its embedded Unveil app resources into NAND before launcher enumeration, without overwriting config.json. A six-digit Idea distribution can use this same self-contained firmware bundle.
+
+For script-only development uploads, use:
 
 ```bash
 python tools/install_app.py http://DEVICE_IP

@@ -21,10 +21,10 @@ def main():
     if hashlib.sha256(binary.read_bytes()).hexdigest() != spec['firmware']['sha256']:
         failures.append('firmware SHA-256 differs')
     assert spec['firmware']['flash_address'] == '0x210000'
-    for config in [platform / 'app/config.example.json', root / 'firmware/mosaico-standalone/resources/apps/unveil/config.json']:
+    for config in [platform / 'app/config.example.json', root / 'firmware/mosaico-core/resources/apps/unveil/config.json']:
         if json.loads(config.read_text()).get('pi_url') != '':
             failures.append('Service default must remain blank: ' + str(config.relative_to(root)))
-    for directory in [platform / 'app/scripts', root / 'firmware/mosaico-standalone/resources/apps/unveil/scripts']:
+    for directory in [platform / 'app/scripts', root / 'firmware/mosaico-core/resources/apps/unveil/scripts']:
         if "default=''" not in (directory / 'endpoint.lua').read_text():
             failures.append('Embedded service default must remain blank')
     sdk = (platform / 'sdkconfig.release').read_text()

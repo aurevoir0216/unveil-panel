@@ -1,12 +1,16 @@
 # Mosaico distributions
 
-All variants retain the existing Unveil UI and numeric backend protocol. Wi-Fi and service settings start blank. Newly split startup paths are build candidates, not yet hardware-accepted releases.
+Both maintained variants retain the existing Unveil UI and numeric backend protocol. Wi-Fi and service settings start blank. Newly split startup paths are build candidates, not yet hardware-accepted releases.
 
-## Standalone
+## Independent Idea application
 
-An independent ESP-IDF application owns Lua workers, bounded queues, HTTPS, files, Wi-Fi, sound, motor and a raw-panel LVGL port. DMA completion and TE events provide frame counters. It does not link or start Mosaico-Claw's desktop, Works catalog, capability router or AI services. A Lua UI does not imply use of the Claw runtime.
+The maintained independent runtime is in mosaico-core. The Idea project adds the official Vibe Mode/ESP-Iris installation and recovery contract. Normal boot goes directly to Unveil; Mosaico-Claw and the desktop are not linked or started. The original bootloader and Vibe Mode stay in Flash and do not run alongside the application.
 
-Its own bootloader and Flash layout replace the original retained Mosaico prefix. Installation is a deliberate device conversion; preparation does not perform it. Device NAND data is not included in a factory image.
+The two applications share the desktop's LVGL presenter source and measured TE composition transport. Direct boot removes the shell and other applications, while preserving the display pipeline used by the desktop variant. The original simplified Idea flush implementation has been replaced. Device-only application preferences are restored from retained NVS after resource updates; chart/history data are not included in that preference snapshot.
+
+## Frozen full-Flash project
+
+mosaico-standalone remains in the repository without further updates. Its historical layout replaced the retained Mosaico prefix. Its binaries have been removed from Releases; archived source is not the maintained independent distribution.
 
 ## Desktop
 
@@ -16,14 +20,14 @@ The app uses the paired firmware's native LVGL extensions. It is not a Works dow
 
 ## Idea
 
-The independent UI/runtime core adds the official ESP-Iris normal-app integration. The .irisfw contains a real esp-iris-system-update/0.2 manifest, app, resources and compatible partition table. The immutable retained prefix is preserved. Its private resource image uses space released by reducing its own app slot; factory ui_apps and system ranges are untouched.
+The maintained independent UI/runtime core adds the official ESP-Iris normal-app integration. The .irisfw contains a real esp-iris-system-update/0.2 manifest, app, resources and compatible partition table. The immutable retained prefix is preserved. Its private resource image uses space released by reducing its own app slot; factory ui_apps and system ranges are untouched.
 
 It boots as the selected native app, rather than inside Mosaico-Claw. System -> Ideas requests return to Vibe Mode. Official store publication and a six-digit number are separate steps, not implied by creating a local bundle.
 
 ## Top-button scan timing
 
-All three variants pause the sweep while returning to the radar page. After scrolling stops, an explicitly invalidated static home frame must be submitted, transferred and presented. Only then are the sweep and start haptic released in the same UI batch. Capture requests and backend progress are not delayed or substituted. Leaving home cancels pending visual feedback.
+Both maintained variants pause the sweep while returning to the radar page. After scrolling stops, an explicitly invalidated static home frame must be submitted, transferred and presented. Only then are the sweep and start haptic released in the same UI batch. Capture requests and backend progress are not delayed or substituted. Leaving home cancels pending visual feedback.
 
 ## Acceptance boundary
 
-Builds, dependency separation, partition fit, privacy checks and bundle inspection are recorded with prepared artifacts. Desktop local UI and display handoff have been exercised on hardware, and an earlier Idea memory fix passed startup. The latest independent/Idea paths and backend-dependent completion flow still require physical acceptance. Old tests on the dedicated framework build do not constitute acceptance of these new startup paths.
+Builds, dependency separation, partition fit, privacy checks and bundle inspection are recorded with prepared artifacts. The current Idea path passed normal boot, the physical top button, backend progress through chart preparation and 100%, 25 primary transitions, radial limits, theme/language rebuilds and a complete resource-image update with byte-equal preferences. The user confirmed that physical radar flicker/misalignment disappeared. Desktop local UI and handoff were previously exercised, but the new automatic resource seed still needs device acceptance. Store publication remains separate.

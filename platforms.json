@@ -9,23 +9,35 @@
     "release_tag": "v0.21",
     "hardware_accepted": false,
     "distributions": {
-      "standalone": {
-        "source": "firmware/mosaico-standalone",
-        "mosaico_framework": false,
-        "replaces_flash_layout": true
-      },
       "desktop": {
         "source": "firmware/mosaico",
         "mosaico_framework": true,
-        "entry": "desktop app icon"
+        "entry": "desktop app icon",
+        "automatic_app_resources": true,
+        "automatic_resources_hardware_accepted": false
       },
       "idea": {
         "source": "firmware/mosaico-idea",
         "mosaico_framework": false,
         "retains_vibe_mode": true,
-        "format": ".irisfw"
+        "format": ".irisfw",
+        "boot": "direct Unveil",
+        "retains_bootloader": true,
+        "hardware_accepted": true,
+        "shared_display_component": "firmware/mosaico/components/esp_lvgl_present"
       }
     },
-    "works_download": false
+    "works_download": false,
+    "archived_distributions": {
+      "full_flash": {
+        "source": "firmware/mosaico-standalone",
+        "mosaico_framework": false,
+        "replaces_flash_layout": true,
+        "status": "frozen",
+        "last_release": "v0.21",
+        "release_assets": false
+      }
+    },
+    "candidate_version": "v0.22"
   }
 }

@@ -50,6 +50,8 @@ typedef struct {
     esp_display_present_render_alignment_t render_alignment;
     bool (*validate_generation)(void *user_ctx, uint32_t generation);
     void *validation_user_ctx;
+    void (*observe_region)(lv_display_t *, const lv_area_t *, const void *, size_t, void *);
+    void *observe_user_ctx;
 } esp_lv_adapter_display_runtime_config_t;
 
 typedef struct esp_lv_adapter_display_node {

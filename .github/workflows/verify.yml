@@ -18,5 +18,7 @@ jobs:
           python-version: '3.12'
       - name: Verify packaged source, app resources and firmware
         run: python tools/verify_snapshot.py
+      - name: Test desktop embedded app installation
+        run: python tests/test_desktop_seed.py
       - name: Check Python utilities
-        run: python -m py_compile tools/verify_snapshot.py tools/build_mosaico.py tools/package_mosaico.py tools/compact_wifi_font.py tests/run_lua32_protocol.py firmware/mosaico/tools/prepare.py firmware/mosaico/tools/install_app.py
+        run: python -m py_compile tools/verify_snapshot.py tools/build_mosaico.py tools/package_mosaico.py tools/compact_wifi_font.py tests/run_lua32_protocol.py tests/test_idea_preferences.py firmware/mosaico/tools/prepare.py firmware/mosaico/tools/install_app.py firmware/mosaico/tools/stage_unveil_app.py

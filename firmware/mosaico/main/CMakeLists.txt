@@ -30,4 +30,14 @@ idf_component_register(
 
 if(UNVEIL_DISTRIBUTION STREQUAL "desktop")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE UNVEIL_DESKTOP_BUILD=1)
+    file(GLOB_RECURSE UNVEIL_SEED_INPUTS CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/app/scripts/*.lua" "${CMAKE_SOURCE_DIR}/app/assets/*" "${CMAKE_SOURCE_DIR}/app/launcher.json")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${UNVEIL_SEED_INPUTS})
+    set(UNVEIL_APP_SEED "${CMAKE_CURRENT_BINARY_DIR}/unveil_app_seed.bin")
+    execute_process(COMMAND ${PYTHON} "${CMAKE_SOURCE_DIR}/tools/stage_unveil_app.py"
+        --app "${CMAKE_SOURCE_DIR}/app" --archive "${UNVEIL_APP_SEED}"
+        RESULT_VARIABLE UNVEIL_SEED_RESULT)
+    if(NOT UNVEIL_SEED_RESULT EQUAL 0)
+        message(FATAL_ERROR "Unveil desktop seed generation failed")
+    endif()
+    target_add_binary_data(${COMPONENT_LIB} "${UNVEIL_APP_SEED}" BINARY)
 endif()
