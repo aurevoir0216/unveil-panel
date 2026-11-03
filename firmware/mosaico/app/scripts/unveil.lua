@@ -357,8 +357,8 @@ paint_history=function(parent,shell_only)
  local function update()
   if not history_ui or history_ui.parent~=parent or not history_ui.list:is_valid() then
    parent:clean();local ui={parent=parent,rows={},count=0};history_ui=ui
-   ui.sort=box(parent,300,48,156,38,C.card,19);ui.sort:add_flag('CLICKABLE');lvgl.guard_tap(ui.sort,18)
-   ui.title=center(ui.sort,'',0,F.small,C.fg);ui.title:align('center',0,0)
+   ui.sort=box(parent,162,48,156,38,C.card,19);ui.sort:add_flag('CLICKABLE');lvgl.guard_tap(ui.sort,18)
+   ui.title=center(ui.sort,'',0,F.tabs,C.fg);ui.title:align('center',0,0)
    ui.list=lvgl.object(parent,{x=0,y=100,w=468,h=334,pad=0,radius=0,bg_color=C.bg,border_width=0})
    ui.list:add_flag('SCROLLABLE');ui.list:set_scroll({dir='ver',scrollbar='auto'})
    ui.spacer=box(ui.list,0,0,1,1,C.bg);ui.spacer:set_style({bg_opa=0})
@@ -387,7 +387,7 @@ paint_history=function(parent,shell_only)
    ui.sort:on('clicked',function() cfg.history_newest=not cfg.history_newest;save();ui.list:scroll_y(0);history_signature=nil;paint_history(parent) end)
   end
   local ui=history_ui;ui.count=shell_only and 0 or #history
-  ui.title:set_text(cfg.history_newest and tr('最新','NEWEST') or tr('最老','OLDEST'));ui.title:align('center',0,0)
+  ui.title:set_text(cfg.history_newest and 'NEWEST' or 'OLDEST');ui.title:align('center',0,0)
   ui.spacer:set_size(1,math.max(1,ui.count*84))
   if ui.count==0 and not shell_only then
    ui.empty:set_text(history_error and '--' or (history_loading or not history_loaded) and '...' or tr('暂无记录','No records'));ui.empty:clear_flag('HIDDEN')

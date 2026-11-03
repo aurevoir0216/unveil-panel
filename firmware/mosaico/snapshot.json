@@ -33,5 +33,6 @@
     "flash_size": "16MB"
   },
   "app": "app",
-  "note": "Main-partition upgrade for the verified existing Mosaico Recovery ABI 2/layout 5; not a merged full-flash image. App files also required on NAND."
+  "note": "Main-partition upgrade for the verified existing Mosaico Recovery ABI 2/layout 5; not a merged full-flash image. App files also required on NAND.",
+  "app_version": "0.1.1"
 }
