@@ -1,6 +1,6 @@
 {
   "mosaico": {
-    "status": "hardware-verified",
+    "status": "maintained",
     "soc": "esp32s31",
     "display": [
       480,
@@ -9,13 +9,6 @@
     "release_tag": "v0.1",
     "hardware_accepted": true,
     "distributions": {
-      "desktop": {
-        "source": "firmware/mosaico",
-        "mosaico_framework": true,
-        "entry": "desktop app icon",
-        "automatic_app_resources": true,
-        "automatic_resources_hardware_accepted": true
-      },
       "idea": {
         "source": "firmware/mosaico-idea",
         "mosaico_framework": false,
@@ -23,12 +16,18 @@
         "format": ".irisfw",
         "boot": "direct Unveil",
         "retains_bootloader": true,
-        "hardware_accepted": true,
+        "hardware_accepted_release": "v0.1",
         "shared_display_component": "firmware/mosaico/components/esp_lvgl_present"
       }
     },
     "works_download": false,
     "archived_distributions": {
+      "desktop": {
+        "source": "firmware/mosaico",
+        "status": "frozen",
+        "last_release": "v0.1",
+        "new_release_assets": false
+      },
       "full_flash": {
         "source": "firmware/mosaico-standalone",
         "mosaico_framework": false,

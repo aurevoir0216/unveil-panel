@@ -1,47 +1,37 @@
 # Unveil
 
-射频采集与分析的触摸界面。设备处理交互与图表绘制，树莓派提供采集、分析、进度和历史数据。
+**把 ESP-Mosaico 变成手持射频扫描仪。** Unveil 在 480 × 480 触屏上控制采集、查看分析进度和浏览信号图表。树莓派负责射频采集和分析，设备接收数值并在本地绘制。
 
-当前硬件：**ESP-Mosaico / ESP32-S31 / 480 × 480**。维护两种运行形式：
+[下载 Idea 固件](https://github.com/aurevoir0216/unveil/releases/latest) · [RFPI 接口](docs/backend.md) · [构建与分区](firmware/mosaico-idea/README.md)
 
-| 版本 | 运行方式 | 工程 |
-| --- | --- | --- |
-| Idea 独立运行版 | 保留原厂引导与 Vibe Mode，开机直接进入 Unveil，不加载 Mosaico 桌面或 Claw 框架 | [mosaico-idea](firmware/mosaico-idea/) |
-| Desktop 桌面应用版 | 保留 Mosaico 桌面，通过圆形 Unveil 图标打开 | [mosaico](firmware/mosaico/) |
+## 上手
 
-桌面版通过 Vibe Mode 安装固件，正常开机仍进入 Mosaico。桌面固件会自行安装配套脚本、字体和图标。六位下载编号需要在官方 Ideas 平台发布；GitHub 的安装包不提供编号。
+1. 在 Release 下载名称包含 `idea` 的 `.irisfw`，按 ESP-Mosaico 的 Vibe Mode 更新流程安装。
+2. 开机进入 Unveil，在 **系统 → Wi-Fi** 连网，在 **系统 → 服务地址** 填写 RFPI 的 HTTP 或 HTTPS 根地址。
+3. 在雷达页点 **START**，或短按顶部按键回雷达页并启动扫描。左右滑动切换页面，二级页面向上滑返回。
 
-**全盘独立版停止更新，源码保留在 [mosaico-standalone](firmware/mosaico-standalone/)，不再提供 Release 附件。** 活跃的 Idea 版使用 [mosaico-core](firmware/mosaico-core/)；后续修复不写回被冻结的全盘工程。
+需要命令行安装时，从已配置好的 [Mosaico Vibe 工作区](https://github.com/esp-mosaico/esp-mosaico-vibe) 运行以下命令。设备标识取自该工作区的 Iris 设备列表。
 
-Idea 版复用桌面版的显示合成、刷屏同步和触摸适配器，修复了松开手指时坐标跳变造成的点按失效。真机回归覆盖设置、音量、历史排序、图表切换、顶部按钮和完整扫描。桌面版已在真机验证自动安装应用资源、保留已有设置，以及通过图标启动。
-
-![Unveil 雷达](docs/images/radar.png)
-
-## 下载
-
-从 [Unveil v0.1](https://github.com/aurevoir0216/unveil/releases/tag/v0.1) 下载带 `desktop` 或 `idea` 名称的文件。
-
-- 桌面版 ZIP 包含固件与开发用资源上传工具；新版固件在启动时自行补齐桌面应用资源，保留已有设置。
-- Idea 为官方格式 `.irisfw` 安装包；提供文件不代表已上架官方 Ideas 商店或获得六位编号。
-
-## 界面与数据
-
-保留原生 LVGL 雷达、径向等宽圆盘、三类图表、实时历史、语言、主题、静音及音量设置。图表准备计入总进度；100% 呈现结果后才播放完成声音和振动。历史排序使用居中的点阵 `NEWEST / OLDEST`，不随语言切换。
-
-两个维护版本的顶部按钮都先回首页并停稳，再同步启动扫描动画与震动。桌面版应用内 Wi-Fi 只显示连接状态，配置使用 Mosaico 系统设置。
-
-Wi-Fi 和服务地址默认留空，由使用者配置。发布包不包含个人 NVS、历史、采集数据或模型权重。后端协议见 [backend.md](docs/backend.md)。
-
-## 构建与扩展
-
-使用固定 ESP-IDF 提交 `7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`，先阅读对应工程的依赖说明。
-
-```bash
-source /path/to/esp-idf/export.sh
-python tools/build_mosaico.py desktop
-python tools/build_mosaico.py idea
+```sh
+python mosaico.py iris system-update --bundle /path/to/unveil-mosaico-idea.irisfw --device-id <device-id>
 ```
 
-构建工具只编译，不自动安装或烧录。后续硬件也使用自己的目录、配置和安装契约。
+## 界面
 
-独立运行核心复用了 Apache-2.0 的硬件 BSP 和部分 Lua/LVGL 绑定代码，但不链接 ESP-Claw 系统运行层。来源见 [THIRD_PARTY.md](THIRD_PARTY.md)，字体许可证随资源提供。
+| 页面 | 用途 |
+| --- | --- |
+| 雷达 | 扫描、分阶段进度、检测结果、声音与震动反馈 |
+| 圆盘 | 等宽径向档位，调节轮数、采集时长和分析窗口 |
+| 图表 | Spectrum 频谱、STFT 时频图和 Activity 相对功率 |
+| 历史 | 从 RFPI 读取最近记录，切换排序，按记录加载图表 |
+| 系统 | Wi-Fi、服务地址、主题、语言、声音和 Vibe Mode 入口 |
+
+## RFPI 后端
+
+设备通过 JSON HTTP 接口发起采集、读取状态并获取图表和历史。服务地址和 Wi-Fi 默认留空。RFPI 测试模式由后端控制，支持用已有采集数据跑通流程。端点、字段、单位和返回示例见 [RFPI 接口](docs/backend.md)。
+
+## 开发
+
+当前维护 **Idea 版**。它在保留 Vibe Mode 的前提下直接启动 Unveil。设备构建需要 ESP32-S31 工具链和固定版本的 ESP-IDF。编译与安装包说明见 [Idea 工程](firmware/mosaico-idea/README.md)。
+
+旧桌面版和全盘独立版归档在 [固件目录](firmware/README.md)。

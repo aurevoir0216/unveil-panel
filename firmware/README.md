@@ -1,9 +1,6 @@
 # Mosaico firmware
 
-Two maintained distributions retain the original bootloader and Vibe Mode:
-- `mosaico-idea/`: boot directly into the independent Unveil runtime.
-- `mosaico/`: original Mosaico desktop with a circular Unveil app icon.
-
-`mosaico-core/` owns the maintained independent runtime, board adapter and UI resources. Idea is a distribution mechanism; the desktop firmware can also be submitted as an Idea when its app resources install automatically.
-
-`mosaico-standalone/` is the frozen historical full-Flash project. Keep its source unchanged; do not build new releases or attach its binaries to GitHub Releases. Works downloads remain cancelled.
+- [`mosaico-idea/`](mosaico-idea/) is the maintained Vibe Mode-compatible Idea firmware.
+- [`mosaico-core/`](mosaico-core/) owns its LVGL/Lua runtime, board adapters and UI resources.
+- [`mosaico/`](mosaico/) preserves the archived Desktop project and provides the low-level display and ESP-Iris dependencies referenced by Idea.
+- [`mosaico-standalone/`](mosaico-standalone/) preserves the historical full-Flash project.

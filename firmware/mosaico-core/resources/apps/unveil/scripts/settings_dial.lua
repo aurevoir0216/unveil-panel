@@ -8,7 +8,7 @@ function M.new(parent,cfg,F,C,tr,save,localize_label)
  local self={pending=false,changed=0}
  local renderer=Render.new(parent,C.bg=='#000000')
  local adjusters={}
- function self:flush(now,force) renderer:draw(now);if self.pending and (force or now-self.changed>1200) then save();self.pending=false end end
+ function self:flush(now,force) if self.pending and (force or now-self.changed>1200) then save();self.pending=false end end
  local function changed() self.pending=true;self.changed=system.millis() end
  local function label(s,x,y,font,color)
   local l=inert(lvgl.label(parent,{text=s,font=font,text_color=color}));if localize_label then localize_label(l,s) end;l:align('top_mid',x-240,y);return l
@@ -39,7 +39,7 @@ function M.new(parent,cfg,F,C,tr,save,localize_label)
    index=n;cfg[p.key]=p.values[n]
    cfg.mode=cfg.analysis_seconds==0 and 'collect' or 'scan'
    local function update()
-   value:set_text(string.format('%g',p.values[n]));value:align('top_mid',p.x-240,p.y);position_unit();fill();renderer:draw(system.millis())
+   value:set_text(string.format('%g',p.values[n]));value:align('top_mid',p.x-240,p.y);position_unit();fill();renderer:draw()
    end
    if lvgl.batch then lvgl.batch(update) else update() end
    changed()
@@ -51,7 +51,7 @@ function M.new(parent,cfg,F,C,tr,save,localize_label)
  input:radial_input(#params[1].values,#params[2].values,#params[3].values)
  input:on('value_changed',function() local v=input:radial_value();local q=math.floor(v/100);if adjusters[q] then adjusters[q](v%100) end end)
  input:on('released',function() self:flush(system.millis(),true) end)
- renderer:draw(system.millis()+40)
+ renderer:draw()
  return self
 end
 return M

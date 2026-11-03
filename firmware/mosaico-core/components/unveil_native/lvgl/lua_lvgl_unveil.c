@@ -8,11 +8,13 @@
 #include "unveil_dial_vector.h"
 #include "unveil_pager_motion.h"
 
+enum { UV_RADAR_TURN_MS = 6000, UV_RADAR_MAX_STEP_MS = 70 };
+
 typedef struct {
     uint16_t *polar;
     uint16_t palette[UV_PALETTE_SIZE];
     uint32_t bg, outside, grid, orange, axis, last_tick;
-    float phase;
+    uint32_t phase_ms;
     int angle;
     bool running;
     lv_obj_t *obj;
@@ -33,29 +35,21 @@ void lua_lvgl_radar_cache_free(void *ptr)
 }
 static void unveil_radar_draw(unveil_radar_cache_t *cache,int angle,bool running,bool full)
 {
-    int minx=216,miny=216,maxx=216,maxy=216;
-    if (full) {minx=miny=0;maxx=maxy=UV_SIDE-1;}
-    else for (int pass=0;pass<2;++pass) {
-        if (!(pass ? running : cache->running)) continue;
-        int head=pass ? angle : cache->angle;
-        for (int lag=0;lag<=UV_TRAIL;lag+=12) {
-            float a=(head-lag-360)*(.0174532925199f/4);
-            int x=(int)lroundf(UV_CENTER+164*cosf(a));
-            int y=(int)lroundf(UV_CENTER+164*sinf(a));
-            if (x<minx) minx=x;
-            if (x>maxx) maxx=x;
-            if (y<miny) miny=y;
-            if (y>maxy) maxy=y;
-        }
+    uv_damage_t damage = {0, 0, UV_SIDE - 1, UV_SIDE - 1};
+    uint16_t outside = uv_565(cache->outside);
+    if (full) {
+        uv_frame(cache->pixels, cache->polar, cache->palette, outside, angle, running);
+    } else {
+        if (running == cache->running && (!running || angle == cache->angle)) return;
+        damage = uv_sweep_update(cache->pixels, cache->polar, cache->palette, outside,
+                                 cache->angle, cache->running, angle, running);
     }
-    if (!full) {minx-=2;miny-=2;maxx+=2;maxy+=2;}
-    if (minx<0) minx=0;
-    if (miny<0) miny=0;
-    if (maxx>=UV_SIDE) maxx=UV_SIDE-1;
-    if (maxy>=UV_SIDE) maxy=UV_SIDE-1;
-    uv_frame_area(cache->pixels,cache->polar,cache->palette,uv_565(cache->outside),angle,running,minx,miny,maxx,maxy);
-    lv_area_t box;lv_obj_get_coords(cache->obj,&box);
-    box.x2=box.x1+maxx;box.y2=box.y1+maxy;box.x1+=minx;box.y1+=miny;
+    lv_area_t box;
+    lv_obj_get_coords(cache->obj, &box);
+    box.x2 = box.x1 + damage.x1;
+    box.y2 = box.y1 + damage.y1;
+    box.x1 += damage.x0;
+    box.y1 += damage.y0;
     lv_obj_invalidate_area(cache->obj,&box);
     cache->angle=angle;cache->running=running;
 }
@@ -67,9 +61,11 @@ static void unveil_radar_tick(lv_timer_t *timer)
     for (lv_obj_t *p=lv_obj_get_parent(cache->obj);p;p=lv_obj_get_parent(p)) {
         if (lv_obj_is_scrolling(p)) return;
     }
-    if (elapsed>70) elapsed=70;
-    cache->phase=fmodf(cache->phase+elapsed*.24f,UV_TURN);
-    unveil_radar_draw(cache,(int)(cache->phase+.5f)%UV_TURN,true,false);
+    /* Avoid a large visual jump on the first frame after a stalled render. */
+    if (elapsed > UV_RADAR_MAX_STEP_MS) elapsed = UV_RADAR_MAX_STEP_MS;
+    cache->phase_ms = (cache->phase_ms + elapsed) % UV_RADAR_TURN_MS;
+    int angle = (cache->phase_ms * UV_TURN + UV_RADAR_TURN_MS / 2) / UV_RADAR_TURN_MS % UV_TURN;
+    unveil_radar_draw(cache, angle, true, false);
 }
 int lua_lvgl_image_radar_frame(lua_State *L)
 {
@@ -95,6 +91,8 @@ int lua_lvgl_image_radar_frame(lua_State *L)
         if(!uv_shared_polar){uv_shared_polar=heap_caps_malloc(UV_PIXELS*2,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);if(uv_shared_polar)uv_geometry(uv_shared_polar);}
         if(!uv_shared_polar){free(cache);free(pixels);free(dsc);lua_lvgl_unlock();return luaL_error(L,"radar geometry allocation failed");}
         cache->polar=uv_shared_polar;++uv_polar_refs;cache->obj=obj;cache->pixels=pixels;
+        cache->angle = angle;
+        cache->phase_ms = (angle * UV_RADAR_TURN_MS + UV_TURN / 2) / UV_TURN;
         dsc->header.magic=LV_IMAGE_HEADER_MAGIC;dsc->header.cf=LV_COLOR_FORMAT_RGB565;
         dsc->header.w=dsc->header.h=UV_SIDE;dsc->header.stride=UV_SIDE*2;
         dsc->data=(const uint8_t *)pixels;dsc->data_size=UV_PIXELS*2;
@@ -106,9 +104,18 @@ int lua_lvgl_image_radar_frame(lua_State *L)
     unveil_radar_cache_t *cache=record->radar_cache;
     bool full=fresh || axis!=cache->axis || outside!=cache->outside || bg!=cache->bg || grid!=cache->grid || orange!=cache->orange;
     if (full) {uv_palette_ex(cache->palette,bg,grid,orange,outside,axis);cache->axis=axis;cache->bg=bg;cache->outside=outside;cache->grid=grid;cache->orange=orange;}
-    cache->last_tick=lv_tick_get();
+    bool was_running = cache->running;
     unveil_radar_draw(cache,cache->angle,running,full);
     if (fresh) {lv_image_set_src(obj,record->data2);cache->timer=lv_timer_create(unveil_radar_tick,25,cache);}
+    if (cache->timer && (fresh || running != was_running)) {
+        if (running) {
+            cache->last_tick = lv_tick_get();
+            lv_timer_reset(cache->timer);
+            lv_timer_resume(cache->timer);
+        } else {
+            lv_timer_pause(cache->timer);
+        }
+    }
     lua_lvgl_unlock();lua_pushinteger(L,(esp_timer_get_time()-started)/1000);return 1;
 }
 /* Pure numeric conversion: callable from a worker without owning the LVGL display. */

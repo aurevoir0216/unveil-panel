@@ -1,5 +1,5 @@
 -- LVGL vector paths: no generated sprites or image buffers.
-local lvgl,system=require('lvgl'),require('system')
+local lvgl=require('lvgl')
 local M={}
 function M.new(parent,dark)
  local self={levels={1,1,1},shown={}}
@@ -8,10 +8,8 @@ function M.new(parent,dark)
  function self:set(q,index) self.levels[q]=index end
  function self:draw()
   if self.shown[1]==self.levels[1] and self.shown[2]==self.levels[2] and self.shown[3]==self.levels[3] then return end
-  local t=system.millis()
-  local us=self.surface:dial_values(self.levels[1],self.levels[2],self.levels[3])
+  self.surface:dial_values(self.levels[1],self.levels[2],self.levels[3])
   for q=1,3 do self.shown[q]=self.levels[q] end
-  print('Unveil vector dial update_ms='..(system.millis()-t)..' geometry_us='..us)
  end
  return self
 end

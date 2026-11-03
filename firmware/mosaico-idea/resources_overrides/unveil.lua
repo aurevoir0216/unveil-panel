@@ -57,21 +57,21 @@ local function load_history()
 end
 local page,sub,dirty,owned,ticks,pending,angle=1,nil,true,false,0,false,0
 local screen,pager,home,readout,percent_label,phase,progress,sweep,action,details_counts,details_analysis,details_state
-local shown_main,shown_phase,shown_capture,shown_analysis
+local shown_main,shown_phase,shown_capture,shown_analysis,shown_numeric
 local F,C,painted_alert,editor,editor_scheme,edit_value,edit_scheme
-local primary_pager,primary_tiles,overlay,overlay_pager,nav_marker,nav_x,nav_from,nav_to,nav_started
+local primary_pager,primary_tiles,overlay,overlay_pager
 local built_dark,home_bg
-local brand_bar,brand_screen,brand_label,building_primary
+local brand_bar,brand_screen,building_primary
 local nav_items,nav_selected={},nil
 local function select_indicator(index,immediate)
  index=math.max(1,math.min(5,index))
  if nav_selected==index then return end
+ local previous=nav_items[nav_selected]
+ if previous then previous.active:add_flag('HIDDEN');previous.dot:clear_flag('HIDDEN') end
  nav_selected=index
  print('Unveil page='..index)
- for i,item in ipairs(nav_items) do
-  if i==index then item.active:clear_flag('HIDDEN');item.dot:add_flag('HIDDEN')
-  else item.active:add_flag('HIDDEN');item.dot:clear_flag('HIDDEN') end
- end
+ local item=nav_items[index]
+ if item then item.active:clear_flag('HIDDEN');item.dot:add_flag('HIDDEN') end
 end
 
 local function tr(c,e)
@@ -199,17 +199,12 @@ local function head(parent,title)
 end
 local function fixed_header()
  if building_primary then return end
- if not brand_bar or not brand_bar:is_valid() or brand_screen~=screen then
-  if brand_bar and brand_bar:is_valid() then brand_bar:delete() end
-  brand_screen=screen;brand_bar=box(screen,0,0,480,32,C.bg)
-  brand_label=center(brand_bar,'Unveil',0,F.brand,C.muted)
- end
- if not brand_label or not brand_label:is_valid() then brand_label=center(brand_bar,'Unveil',0,F.brand,C.muted) end
- brand_bar:set_pos(0,0);brand_bar:set_size(480,32);brand_bar:clear_flag('HIDDEN');brand_bar:move_foreground()
- brand_label:set_text('Unveil');brand_label:set_style({text_color=C.muted});brand_label:clear_flag('HIDDEN');brand_label:align('top_mid',0,0)
+ if brand_bar and brand_bar:is_valid() and brand_screen==screen then return end
+ brand_screen=screen
+ brand_bar=box(screen,0,0,480,32,C.bg)
+ center(brand_bar,'Unveil',0,F.brand,C.muted)
 end
 local function footer()
- fixed_header()
  local bar=box(screen,0,440,480,40,C.bg)
  nav_items={};nav_selected=nil
  for i=1,5 do
@@ -219,8 +214,8 @@ local function footer()
    if not sub and primary_pager then page=i;select_indicator(i,false);primary_pager:set_tile_by_index(i,1,true) end
   end)
   nav_items[i]={dot=box(bar,x-4,12,8,8,C.line,4),active=box(bar,x-10,12,20,8,C.orange,4)}
+  nav_items[i].active:add_flag('HIDDEN')
  end
- nav_marker=nil
  select_indicator(page,true)
 end
 local function display_percent()
@@ -253,7 +248,15 @@ paint_details=function(parent)
   ui.placeholder=center(parent,'',210,F.digits,C.muted)
  end
  local ui=details_ui
- for i=1,3 do ui.pills[i]:set_style({bg_color=i==chart_view and C.orange or C.card});ui.labels[i]:set_style({text_color=i==chart_view and '#171619' or C.fg}) end
+ if ui.active~=chart_view then
+  if ui.active then
+   ui.pills[ui.active]:set_style({bg_color=C.card})
+   ui.labels[ui.active]:set_style({text_color=C.fg})
+  end
+  ui.pills[chart_view]:set_style({bg_color=C.orange})
+  ui.labels[chart_view]:set_style({text_color='#171619'})
+  ui.active=chart_view
+ end
  local token=info and info.chart_token;local valid=token and token>0
  if valid then valid=ui.image:set_chart(chart_view,token,cfg.dark) end
  if valid then
@@ -271,13 +274,13 @@ paint_details=function(parent)
   if info then ui.placeholder:set_text(info.loading and '...' or '--');ui.placeholder:clear_flag('HIDDEN') else ui.placeholder:add_flag('HIDDEN') end
   if token and token>0 then chart_data=nil;details_signature=nil;request_chart(info.source_job,info.capture_id) end
  end
- fixed_header();print('Unveil chart view='..chart_view..' update_ms='..(system.millis()-started))
+ print('Unveil chart view='..chart_view..' update_ms='..(system.millis()-started))
 end
 local function set_visible(o,v) if v then o:clear_flag('HIDDEN') else o:add_flag('HIDDEN') end end
 local function refresh_actual()
  if dirty or sub or paging or not home then return end
  local kind=state.state or 'offline'
- local sig=table.concat({kind,tostring(state.running),tostring(state.online),tostring(state.percent),tostring(state.captured),tostring(state.analyzed),tostring(state.selected),tostring(state.mode),tostring(cfg.analysis_seconds),tostring(chart_prepare_progress),tostring(scan_visual_wait)},'|')
+ local sig=table.concat({kind,tostring(state.running),tostring(state.online),tostring(state.percent),tostring(state.captured),tostring(state.analyzed),tostring(state.selected),tostring(state.mode),tostring(cfg.analysis_seconds),tostring(chart_prepare_progress),tostring(scan_visual_wait),tostring(state.capture_percent),tostring(state.analysis_percent)},'|')
  if sig==last_signature then return end
  last_signature=sig
  if connection_label then connection_label:set_text(state.online and tr('在线','Online') or tr('离线','Offline'));connection_label:align('right_mid',0,0) end
@@ -297,11 +300,15 @@ local function refresh_actual()
  local value=scan_start_pending and '0' or not session_started and not scan_requested and 'START' or (finished or running) and (total and tostring(math.floor(total+.001)) or '--') or words[kind] or 'RETRY'
  if shown_main~=value then
   shown_main=value
-  readout:set_style({font=value:match('^%d+$') and F.digits or F.words})
+  local numeric=value:match('^%d+$')~=nil
+  if shown_numeric~=numeric then
+   readout:set_style({font=numeric and F.digits or F.words})
+   shown_numeric=numeric
+  end
   if readout.set_text_motion then readout:set_text_motion(value,scan_start_pending and 0 or 240) else readout:set_text(value) end
   readout:align('center',0,0)
   local right,bottom=320,270;if readout.center_ink then right,bottom=readout:center_ink() end
-  if value:match('^%d+$') then percent_label:set_pos(math.floor(right+5),math.floor(bottom-24));percent_label:clear_flag('HIDDEN') else percent_label:add_flag('HIDDEN') end
+  if numeric then percent_label:set_pos(math.floor(right+5),math.floor(bottom-24));percent_label:clear_flag('HIDDEN') else percent_label:add_flag('HIDDEN') end
  end
  local phase_value=scan_start_pending and tr('启动中','Starting') or preparing and tr('准备图表','Preparing charts') or state_name(kind)
  if shown_phase~=phase_value then shown_phase=phase_value;phase:set_text(phase_value);phase:align('top_mid',0,285) end
@@ -313,8 +320,8 @@ local function refresh_actual()
  local analysis_off=state.mode=='collect' or (not state.mode and cfg.analysis_seconds==0)
  local analyzed=not analysis_off and (state.analysis_percent and state.analysis_percent/100 or selected>0 and math.min(1,(state.analyzed or 0)/selected) or 0) or 0
  radar:set_progress(fraction,running)
- local cv=scan_start_pending and '0%' or selected>0 and tostring(math.floor(captured*100+.5))..'%' or '--'
- local av=scan_start_pending and not analysis_off and '0%' or not analysis_off and selected>0 and tostring(math.floor(analyzed*100+.5))..'%' or '--'
+ local cv=scan_start_pending and '0%' or (state.capture_percent or selected>0) and tostring(math.floor(captured*100+.5))..'%' or '--'
+ local av=scan_start_pending and not analysis_off and '0%' or not analysis_off and (state.analysis_percent or selected>0) and tostring(math.floor(analyzed*100+.5))..'%' or '--'
  if shown_capture~=cv then shown_capture=cv;capture_metric:set_text(cv);capture_metric:align('center',0,0) end
  if shown_analysis~=av then shown_analysis=av;analysis_metric:set_text(av);analysis_metric:align('center',0,0) end
  if page==3 and paint_details then paint_details(primary_tiles[3]) end
@@ -324,7 +331,7 @@ local function refresh()
  if lvgl.batch then lvgl.batch(refresh_actual) else refresh_actual() end
 end
 local function paint_home(parent)
- shown_main=nil;shown_phase=nil;shown_capture=nil;shown_analysis=nil
+ shown_main=nil;shown_phase=nil;shown_capture=nil;shown_analysis=nil;shown_numeric=nil
  home=parent;painted_alert=false
  radar=Radar.new(parent,{bg=C.bg,orange=C.orange,muted=C.muted,dark=cfg.dark});radar:set_mode(painted_alert)
  local hit=box(parent,76,76,327,327,C.bg,164);hit:set_style({bg_opa=0});hit:add_flag('CLICKABLE')
@@ -352,7 +359,9 @@ local function paint_home(parent)
 
 end
 paint_history=function(parent,shell_only)
- local signature=tostring(cfg.language)..tostring(cfg.history_newest)..tostring(#history==0 and (history_loading or not history_loaded))..tostring(history_error)..(shell_only and ':shell' or '')..json.encode(history)
+ -- Commits and resets clear history_signature. Re-entering a page need not
+ -- serialize the entire history just to check whether its visible rows changed.
+ local signature=tostring(cfg.language)..tostring(cfg.history_newest)..tostring(#history==0 and (history_loading or not history_loaded))..tostring(history_error)..(shell_only and ':shell' or '')
  if history_parent==parent and history_signature==signature then history_dirty=false;return end
  local started=system.millis();history_parent=parent;history_signature=signature
  local function update()
@@ -508,7 +517,7 @@ local function build_primary()
  primary_pager:set_scroll({dir='hor',scrollbar='off',snap_x='center',snap_y='center'})
  if primary_pager.pager_motion then primary_pager:pager_motion() end
  pcall(function() primary_pager:on('scroll_begin',function() paging=true;if lvgl.render_stats then lvgl.render_stats(true) end; end) end)
- pcall(function() primary_pager:on('scroll_end',function() paging=false;fixed_header();if lvgl.render_stats then local p=lvgl.render_stats(true);print(string.format('Unveil paging frames=%d mean_us=%d max_us=%d elapsed_ms=%d',p.frames,p.mean_us,p.max_us,p.elapsed_ms)) end;last_signature=nil;refresh() end) end)
+ pcall(function() primary_pager:on('scroll_end',function() paging=false;if lvgl.render_stats then local p=lvgl.render_stats(true);print(string.format('Unveil paging frames=%d mean_us=%d max_us=%d elapsed_ms=%d',p.frames,p.mean_us,p.max_us,p.elapsed_ms)) end;last_signature=nil;refresh() end) end)
  pager=primary_pager;primary_tiles={}
  local this_pager=primary_pager
  for i=1,5 do
@@ -524,7 +533,7 @@ local function build_primary()
  footer();built_dark=cfg.dark;built_language=cfg.language
  dirty=false;refresh();screen:load()
  if old_screen then old_screen:delete() end
- building_primary=false;brand_bar=nil;brand_label=nil;brand_screen=nil;fixed_header()
+ building_primary=false;brand_bar=nil;brand_screen=nil;fixed_header()
 end
 local function render_actual()
  if not primary_pager or built_dark~=cfg.dark then build_primary()
@@ -545,6 +554,7 @@ local function render_actual()
    if current_overlay~=overlay_pager or not current_overlay:is_valid() then return end
    local tile=current_overlay:get_active_tile();if tile then local _,y=tile:get_pos();if y>490 then back() elseif y<470 then overlay_pager:set_tile_by_index(1,2,true) end end
   end)
+  if brand_bar then brand_bar:move_foreground() end
  elseif overlay then
   -- Parent stays alive throughout the gesture; only replace the changed rows.
   if page==4 then paint_history(primary_tiles[4]) elseif page==5 then
@@ -584,7 +594,6 @@ local function run()
  render();screen:load();if lvgl.present_ready then local p=lvgl.render_stats and lvgl.render_stats(false);print('Unveil bootstrap early_frames='..tostring(p and p.frames));lvgl.present_ready() end;startup_stage('ui_ready');if lvgl.sound then pcall(lvgl.sound,'settings',cfg.sound_volume,cfg.sound_muted) end;start()
  local next_poll=system.millis()+1500
  if lvgl.set_gesture_options then lvgl.set_gesture_options({scroll_limit=28,scroll_throw=12}) end
- local next_frame=system.millis()
  local next_nav=system.millis()
  local next_command_check=0
  local next_profile=system.millis()+5000
@@ -701,17 +710,11 @@ local function run()
   end
   if history_dirty and not paging and primary_tiles and not sub and (page==4 or not state.running) then paint_history(primary_tiles[4]) end
   if dirty and not paging then render() end
-  if not sub and now>=next_nav then
+  if not sub and not paging and now>=next_nav then
    next_nav=now+500
    local tile=primary_pager:get_active_tile()
    if tile then local x=tile:get_pos();local base=primary_tiles[1]:get_pos();local w=primary_tiles[1]:get_size()
     if w>0 then page=math.max(1,math.min(5,math.floor((x-base)/w+.5)+1));select_indicator(page,true) end
-   end
-  end
-  if now>=next_frame then
-   next_frame=now+25
-   if not paging and not sub and page==1 and state.online and state.running then
-    radar:animate(now)
    end
   end
   if pacing then pacing:wait() else delay.delay_ms(16) end
