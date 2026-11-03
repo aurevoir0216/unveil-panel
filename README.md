@@ -1,50 +1,46 @@
 # Unveil
 
-Unveil 是射频采集与分析的设备界面。设备负责交互与可视化，树莓派负责采集、分析、图表数据和历史服务。
+射频采集与分析的触摸界面。设备处理交互与图表绘制，树莓派提供采集、分析、进度和历史数据。
 
-仓库按硬件平台组织，各平台独立构建、发布固件。当前已实现 **ESP-Mosaico / ESP32-S31，480 × 480 触摸屏**；其他平台尚未适配。
+当前硬件：**ESP-Mosaico / ESP32-S31 / 480 × 480**。提供三种运行形式，不提供独立的 Works 下载版。
 
-| 平台 | 状态 | 源码与安装说明 |
+| 版本 | 运行方式 | 工程 |
 | --- | --- | --- |
-| ESP-Mosaico | 已有真机部署与验证记录 | [firmware/mosaico](firmware/mosaico/) |
+| Standalone 独立固件 | ESP-IDF + LVGL + 自有 Lua/任务/网络运行层，没有 Mosaico-Claw 框架 | [mosaico-standalone](firmware/mosaico-standalone/) |
+| Desktop 桌面应用固件 | 保留原 Mosaico 桌面，点击圆形 Unveil 图标打开应用 | [mosaico](firmware/mosaico/) |
+| Idea 应用包 | 使用 Vibe Mode 安装 `.irisfw`，切换进入 Unveil | [mosaico-idea](firmware/mosaico-idea/) |
 
-## Mosaico 当前版本
+**三个新版本均为构建候选版，尚未完成新启动路径的真机验收。** 本轮没有切换设备固件。安装和验证边界见 [版本说明](docs/distributions.md)。
 
-2026-11-03 快照：开机直达 Unveil、原生 LVGL 雷达与矢量圆盘、等宽档位、三类图表、实时历史、Wi-Fi、语言、主题、音量和静音设置。
+![Unveil 雷达](docs/images/radar.png)
 
-- 顶部按钮返回雷达并开始新扫描；忙碌时只返回首页。
-- 开始后立即显示 0%；图表准备纳入总进度，100% 显示结果后才播放完成声音和振动。
-- 开始振动等待首页帧实际完成传输与呈现。
-- 树莓派测试与真实历史隔离；测试结果保留 15 分钟，ESP 不生成测试采集数据。
+## 下载
 
-![雷达](docs/images/radar.png)
+从 [Releases](https://github.com/aurevoir0216/unveil/releases) 下载带 `standalone`、`desktop`、`idea` 名称的文件。标题使用 `Unveil v0.xx`，不单独附带 SHA256 下载文件。
 
-## 目录
+- 独立版 ZIP 包含自己的启动器、分区表、主程序、资源与工厂镜像，安装会替换原 Mosaico Flash 布局。
+- 桌面版 ZIP 包含框架应用升级包和 NAND 配套脚本、字体与上传工具。
+- Idea 为官方格式 `.irisfw` 安装包；提供文件不代表已上架官方 Ideas 商店或获得六位编号。
 
-```text
-firmware/
-  mosaico/          Mosaico 独立 ESP-IDF 工程、Lua 界面、字体与固件
-    app/           上传到 NAND /apps/unveil 的配套文件
-    patches/       ESP-Claw 与 ESP-IDF 修改
-    releases/      已验证主固件与校验值
-docs/              接口、版本与验证说明
-tools/             仓库快照验证工具
+旧 `v0.10 / v0.11` 是基于 Mosaico 框架的专用启动版本，不能当作完全独立固件。
+
+## 界面与数据
+
+保留原生 LVGL 雷达、径向等宽圆盘、三类图表、实时历史、语言、主题、静音及音量设置。图表准备计入总进度；100% 呈现结果后才播放完成声音和振动。历史排序使用居中的点阵 `NEWEST / OLDEST`，不随语言切换。
+
+Wi-Fi 和服务地址默认留空，由使用者配置。发布包不包含个人 NVS、历史、采集数据或模型权重。后端协议见 [backend.md](docs/backend.md)。
+
+## 构建与扩展
+
+使用固定 ESP-IDF 提交 `7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`，先阅读对应工程的依赖说明。
+
+```bash
+source /path/to/esp-idf/export.sh
+python tools/build_mosaico.py standalone
+python tools/build_mosaico.py desktop
+python tools/build_mosaico.py idea
 ```
 
-后续硬件新增到 `firmware/<platform>/`，使用自己的构建配置、适配代码和固件下载包；平台相关的屏幕、触摸、按键、声音与存储实现不混入其他平台。
+构建工具只编译，不自动安装或烧录。后续硬件也使用自己的目录、配置和安装契约。
 
-## 下载与构建
-
-从 [Releases](https://github.com/aurevoir0216/unveil/releases) 下载带 `mosaico` 名称的独立升级包，或按 [Mosaico 构建说明](firmware/mosaico/README.md) 编译。
-
-本快照提供现有 Mosaico 分区布局的 **主程序升级包**，配套 Lua 与字体也必须安装。它不是首次烧录所需的整片 Flash 镜像，不能写到地址 0。
-
-## 树莓派服务与数据
-
-设备连接使用者自行部署的 RFPI 服务，默认服务地址为空，需在系统设置中填写。接口见 [docs/backend.md](docs/backend.md)。本仓库没有包含 RF 原始数据、模型权重、设备 Wi-Fi 密码、NVS、用户历史或个人设置。当前硬件测试使用已保存的真实 I/Q，不代表新发生的 RF 采集。
-
-## 来源与验证范围
-
-Mosaico 工程基于 [ESP-Mosaico-Claw](https://github.com/esp-mosaico/esp-mosaico-claw) 和 [ESP-Claw](https://github.com/espressif/esp-claw)，保留上游许可证；字体许可证位于 `firmware/mosaico/app/assets/`。精确依赖提交、固件哈希见 [snapshot.json](firmware/mosaico/snapshot.json)。
-
-界面采样或电脑模拟器不能代表真机动画帧率；当前快照没有可靠的实时 CPU 占用百分比。
+独立版复用了 Apache-2.0 的硬件 BSP 和部分 Lua/LVGL 绑定代码，但不链接 ESP-Claw 系统运行层。来源见 [THIRD_PARTY.md](THIRD_PARTY.md)，字体许可证随资源提供。

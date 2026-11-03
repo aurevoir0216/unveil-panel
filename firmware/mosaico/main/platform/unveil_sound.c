@@ -1,3 +1,4 @@
+#ifndef UNVEIL_DESKTOP_BUILD
 #include "unveil_sound.h"
 #include <math.h>
 #include <stdatomic.h>
@@ -77,3 +78,5 @@ esp_err_t unveil_sound_command(const char *kind,int volume,bool muted)
     if(muted||volume==0)return ESP_OK;
     return xQueueOverwrite(queue,&event)==pdPASS ? ESP_OK : ESP_FAIL;
 }
+
+#endif

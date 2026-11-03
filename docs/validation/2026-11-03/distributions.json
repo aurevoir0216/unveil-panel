@@ -1,0 +1,133 @@
+{
+  "release": "v0.20",
+  "device_switched": false,
+  "hardware_accepted": false,
+  "works_cancelled": true,
+  "source_and_uncompressed_payload_privacy_check": true,
+  "lua32_protocol_cases": 774,
+  "lua_syntax_files": 51,
+  "wifi_32_byte_ssid_boundary_test": true,
+  "variants": {
+    "standalone": {
+      "application_bytes": 2102848,
+      "application_sha256": "a48c62c2304abe2d37f4ecb78c693c1d0ee98f62db72224d54035c09953b2d7b",
+      "component_count": 167,
+      "hardware_accepted": false
+    },
+    "desktop": {
+      "application_bytes": 6720384,
+      "application_sha256": "365c5ff28afd92f39004e92e44ced8e5e09c8782bef18499d4f7545eb67a9c55",
+      "component_count": 304,
+      "hardware_accepted": false,
+      "official_bundle_inspection": {
+        "schema": "esp-iris-system-update/0.2",
+        "manifest_sha256": "5cc501d8d1e307cceeb4379d403e969733c17fbe0c72cf303742346bdd4913be",
+        "key_id": null,
+        "chip_id": 32,
+        "flash_size": 16777216,
+        "target_layout_sha256": "637a8e4adf741b8a612a10937096c024e102dcdfebb809d879656b8fe9a2b0ad",
+        "components": [
+          {
+            "id": 1,
+            "kind": "partition_table",
+            "flags": 0,
+            "target_offset": 32768,
+            "size": 4096,
+            "sha256": "637a8e4adf741b8a612a10937096c024e102dcdfebb809d879656b8fe9a2b0ad",
+            "file": "partition-table.bin"
+          },
+          {
+            "id": 2,
+            "kind": "application",
+            "flags": 0,
+            "target_offset": 2162688,
+            "size": 6720384,
+            "sha256": "365c5ff28afd92f39004e92e44ced8e5e09c8782bef18499d4f7545eb67a9c55",
+            "file": "ota_0.bin"
+          },
+          {
+            "id": 3,
+            "kind": "data",
+            "flags": 0,
+            "target_offset": 10354688,
+            "size": 2714512,
+            "sha256": "9df60e469d841233e8e5274130c8c6fb35be9b2d29dd6fa0d514429594f3900b",
+            "file": "ui_apps.bin"
+          },
+          {
+            "id": 4,
+            "kind": "data",
+            "flags": 0,
+            "target_offset": 13631488,
+            "size": 3072000,
+            "sha256": "e72541e2fa0d1cc378d400fccd734c44555cdcca0cc93974687214363a3e3112",
+            "file": "system.bin"
+          }
+        ],
+        "signature_verified": false,
+        "release": "0.2.0",
+        "minimum_recovery_version": "0.2.0"
+      }
+    },
+    "idea": {
+      "application_bytes": 2193152,
+      "application_sha256": "06171db77fb7025f0246922044eaf3977320e90074f7cbd6b467999a55302d91",
+      "component_count": 171,
+      "hardware_accepted": false,
+      "official_bundle_inspection": {
+        "schema": "esp-iris-system-update/0.2",
+        "manifest_sha256": "af05147283b76a36c601fc56dad1c909c6dadebfe31fa51f4344bc024cb7463c",
+        "key_id": null,
+        "chip_id": 32,
+        "flash_size": 16777216,
+        "target_layout_sha256": "72464cdf0353100cf727d0416d757bfd3239cf61d9e7c4146ee972fc6f32aac8",
+        "components": [
+          {
+            "id": 1,
+            "kind": "partition_table",
+            "flags": 0,
+            "target_offset": 32768,
+            "size": 4096,
+            "sha256": "72464cdf0353100cf727d0416d757bfd3239cf61d9e7c4146ee972fc6f32aac8",
+            "file": "partition-table.bin"
+          },
+          {
+            "id": 2,
+            "kind": "application",
+            "flags": 0,
+            "target_offset": 2162688,
+            "size": 2193152,
+            "sha256": "06171db77fb7025f0246922044eaf3977320e90074f7cbd6b467999a55302d91",
+            "file": "ota_0.bin"
+          },
+          {
+            "id": 3,
+            "kind": "data",
+            "flags": 0,
+            "target_offset": 6356992,
+            "size": 3145728,
+            "sha256": "07ea8ec4fe30eb1a15d3c98249a42d3bfb0d57ea3279ba8ff490cb9e3b2f8591",
+            "file": "unveil.bin"
+          }
+        ],
+        "signature_verified": false,
+        "release": "0.2.0",
+        "minimum_recovery_version": "0.2.0"
+      }
+    }
+  },
+  "artifacts": {
+    "unveil-mosaico-idea-v0.20.irisfw": {
+      "bytes": 2890948,
+      "sha256": "c998f3ac50b9846be5e5087541008b9b5e69812281c008a20a6dab9b839b2ca7"
+    },
+    "unveil-mosaico-desktop-v0.20.zip": {
+      "bytes": 7645269,
+      "sha256": "4cc1e6221d4446642c1747d9e6d50f6c8158456f58e76b0da4e49ca3131cdf06"
+    },
+    "unveil-mosaico-standalone-v0.20.zip": {
+      "bytes": 5719122,
+      "sha256": "856a067d28e25c56f0c2b31ff9696e50001b77d455e0b57b275bdf413905316f"
+    }
+  }
+}

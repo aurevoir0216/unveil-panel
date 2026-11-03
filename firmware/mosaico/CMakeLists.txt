@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+set(UNVEIL_DISTRIBUTION "desktop" CACHE STRING "Unveil firmware distribution")
 
 include("${CMAKE_SOURCE_DIR}/tools/cmake/esp_idf_patch.cmake")
 
@@ -116,3 +117,8 @@ if(CONFIG_LV_USE_VECTOR_GRAPHIC AND CONFIG_LV_USE_THORVG_INTERNAL)
         -Wno-error=type-limits)
 endif()
 include("${CMAKE_SOURCE_DIR}/tools/cmake/unveil_lvgl_vector_compat.cmake")
+
+if(UNVEIL_DISTRIBUTION STREQUAL "desktop")
+    idf_component_get_property(unveil_lua_lib lua_module_lvgl COMPONENT_LIB)
+    target_compile_definitions(${unveil_lua_lib} PRIVATE UNVEIL_DESKTOP_BUILD=1)
+endif()

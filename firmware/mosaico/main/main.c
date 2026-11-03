@@ -953,6 +953,10 @@ void mosaico_compat_app_main(void)
                                                   NULL));
 
     ESP_ERROR_CHECK(app_settings_service_create(&s_app_settings));
+#ifdef UNVEIL_DESKTOP_BUILD
+    unveil_wifi_configure(s_app_settings);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(unveil_sound_init());
+#endif
 
 #if CONFIG_APP_CLAW_MOSAIC_GSP_ENABLE
     ESP_ERROR_CHECK(weather_service_init(&(weather_service_config_t) {
@@ -1260,6 +1264,13 @@ static void unveil_supervisor(void *ctx)
 }
 void app_main(void)
 {
+#ifdef UNVEIL_DESKTOP_BUILD
+    /* Keep the factory desktop and Works lifecycle; no Unveil boot supervisor. */
+    mosaico_compat_app_main();
+    unveil_wifi_configure(s_app_settings);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(unveil_sound_init());
+    return;
+#endif
     ESP_LOGI("unveil_boot", "Unveil dedicated system starting");
     ESP_ERROR_CHECK(app_allocate_runtime_state());
     ESP_ERROR_CHECK(init_nvs());

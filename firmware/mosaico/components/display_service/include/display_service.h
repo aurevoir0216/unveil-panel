@@ -51,6 +51,7 @@ typedef enum {
 typedef enum {
     DISPLAY_SERVICE_SESSION_FLAG_RESTORE_DEFAULT_ON_RELEASE = 1 << 0,
     DISPLAY_SERVICE_SESSION_FLAG_ALLOW_SYSTEM_OVERLAY       = 1 << 1,
+    DISPLAY_SERVICE_SESSION_FLAG_DISABLE_EXIT_GESTURE        = 1 << 2,
 } display_service_session_flags_t;
 
 typedef void (*display_service_session_cleanup_cb_t)(display_service_session_handle_t session, void *user_ctx);
@@ -237,3 +238,6 @@ bool display_service_presenter_validate(
 #ifdef __cplusplus
 }
 #endif
+
+/* Caller holds the display lock; secondary pages can retain their own swipe. */
+esp_err_t display_service_set_exit_gesture_enabled(display_service_session_handle_t session, bool enabled);

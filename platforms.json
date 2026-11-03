@@ -1,12 +1,31 @@
 {
   "mosaico": {
-    "status": "supported",
+    "status": "build-candidate",
     "soc": "esp32s31",
-    "source": "firmware/mosaico",
-    "release_tag": "mosaico-v0.1.1-20261103",
     "display": [
       480,
       480
-    ]
+    ],
+    "release_tag": "v0.20",
+    "hardware_accepted": false,
+    "distributions": {
+      "standalone": {
+        "source": "firmware/mosaico-standalone",
+        "mosaico_framework": false,
+        "replaces_flash_layout": true
+      },
+      "desktop": {
+        "source": "firmware/mosaico",
+        "mosaico_framework": true,
+        "entry": "desktop app icon"
+      },
+      "idea": {
+        "source": "firmware/mosaico-idea",
+        "mosaico_framework": false,
+        "retains_vibe_mode": true,
+        "format": ".irisfw"
+      }
+    },
+    "works_download": false
   }
 }

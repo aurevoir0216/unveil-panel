@@ -19,4 +19,4 @@ jobs:
       - name: Verify packaged source, app resources and firmware
         run: python tools/verify_snapshot.py
       - name: Check Python utilities
-        run: python -m py_compile tools/verify_snapshot.py firmware/mosaico/tools/prepare.py firmware/mosaico/tools/install_app.py
+        run: python -m py_compile tools/verify_snapshot.py tools/build_mosaico.py tools/package_mosaico.py tests/run_lua32_protocol.py firmware/mosaico/tools/prepare.py firmware/mosaico/tools/install_app.py

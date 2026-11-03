@@ -206,7 +206,8 @@ bool display_service_process_exit_gesture_internal(
     int32_t display_height)
 {
     if (!display_service_session_valid_internal(session) || snapshot == NULL ||
-            display_height <= 0 || session->exit_request_cb == NULL) {
+            display_height <= 0 || session->exit_request_cb == NULL ||
+            (session->flags & DISPLAY_SERVICE_SESSION_FLAG_DISABLE_EXIT_GESTURE)) {
         return false;
     }
 
@@ -1353,4 +1354,14 @@ void display_service_exclusive_raw_suspend_locked(void)
 
 void display_service_exclusive_raw_resume_locked(void)
 {
+}
+
+esp_err_t display_service_set_exit_gesture_enabled(display_service_session_handle_t session, bool enabled)
+{
+    if (!display_service_session_valid_internal(session)) return ESP_ERR_INVALID_STATE;
+    if (enabled) session->flags &= ~DISPLAY_SERVICE_SESSION_FLAG_DISABLE_EXIT_GESTURE;
+    else session->flags |= DISPLAY_SERVICE_SESSION_FLAG_DISABLE_EXIT_GESTURE;
+    session->exit_gesture_tracking = false;
+    session->exit_gesture_captured = false;
+    return ESP_OK;
 }

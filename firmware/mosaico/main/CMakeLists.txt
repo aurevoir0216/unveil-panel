@@ -1,6 +1,7 @@
 idf_component_register(
     SRC_DIRS "." "platform"
     INCLUDE_DIRS "." "platform"
+    PRIV_INCLUDE_DIRS "../third-party/esp-mosaico-utils/esp-mosaico-vibe-mode/include"
     PRIV_REQUIRES
         cap_lua
         cap_http_request
@@ -26,3 +27,7 @@ idf_component_register(
         weather_service
         gmf_core
 )
+
+if(UNVEIL_DISTRIBUTION STREQUAL "desktop")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE UNVEIL_DESKTOP_BUILD=1)
+endif()

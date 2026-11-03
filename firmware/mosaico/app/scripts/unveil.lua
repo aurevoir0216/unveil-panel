@@ -9,11 +9,12 @@ local WiFi=dofile(scripts..'/wifi_ui.lua')
 local wifi_page
 local radar
 local chart_data
-local chart_epoch=0
+local session_generation=dofile(scripts..'/session_generation.lua').seed(system.millis())
+local chart_epoch=session_generation
 local chart_prepare_job,chart_prepare_progress,chart_prepare_failed,chart_retry_at=nil,0,false,0
 local server_test=false
 local session_started=false
-local run_generation=0
+local run_generation=session_generation
 local built_language,last_signature
 local translations,localized_labels={},{}
 local request_chart,paint_details
@@ -47,7 +48,7 @@ local splash_screen,splash_font
 local connection_label,queued_command
 local state,history={online=false,state='ready',running=false,percent=0},{}
 local completion=dofile(scripts..'/completion.lua').new(system.millis,function() haptics:receive(state) end)
-local history_revision,history_generation,history_buffer='',0,{}
+local history_revision,history_generation,history_buffer='',session_generation,{}
 local history_loading,history_next_poll=false,0
 local history_loaded,history_error,history_deadline=false,nil,0
 local request_history
@@ -555,6 +556,7 @@ local function render_actual()
  elseif page==4 then
   paint_history(primary_tiles[4])
  end
+ if lvgl.shell_exit then lvgl.shell_exit(not sub) end
  fixed_header();dirty=false;refresh()
 end
 local function render()
@@ -566,7 +568,7 @@ local function startup_stage(phase)
  local i=system.info and system.info() or {};pcall(storage.write_file,app..'/launch-status.json',json.encode({phase=phase,sram_free=i.sram_free,sram_largest=i.sram_largest,psram_free=i.psram_free}))
 end
 local function run()
- startup_stage('before_init');lvgl.init();owned=true;if lvgl.chart_clear then lvgl.chart_clear() end
+ startup_stage('before_init');lvgl.init({hold_first_frame=true,unveil_input=true});owned=true;if lvgl.chart_clear then lvgl.chart_clear() end
  screen=lvgl.create_screen();screen:set_style({bg_color=cfg.dark and '#000000' or '#e1e1e6',bg_opa=255,pad=0});screen:clear_flag('SCROLLABLE')
  assert(not active(),'Previous Unveil request is finishing; retry shortly')
  while thread.sync.queue_recv(queue,0) do end

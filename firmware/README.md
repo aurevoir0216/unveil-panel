@@ -1,5 +1,8 @@
 # Platform firmware
 
-每个平台独立维护目录、依赖配置、板级适配、安装说明和发布包。
+ESP-Mosaico currently has three distributions:
+- `mosaico-standalone/`: independent ESP-IDF/LVGL application and runtime.
+- `mosaico/`: original Mosaico shell with an Unveil desktop app.
+- `mosaico-idea/`: independent UI core plus retained Vibe Mode/ESP-Iris integration.
 
-当前只有 `mosaico/` 已实现。未来新增平台放入同级目录，不复用 Mosaico 的引脚、分区地址或显示配置。共用数据协议记录在根目录 `docs/backend.md`；可共享的实现应在实际完成第二个平台后再提取，避免声明尚不存在的跨平台兼容性。
+The Works download variant was cancelled. These are different run/install forms for one hardware platform, not three different boards. Future hardware receives separate adapters, configuration and install contracts. New variants are build candidates until hardware acceptance is recorded.

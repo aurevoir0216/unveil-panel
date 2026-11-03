@@ -7,7 +7,7 @@
   "order": 30,
   "visible": true,
   "catalog": {
-    "description": "Unveil RF scan controller for ESP-Mosaico. Boots directly into Unveil; swipe up to return from secondary screens.",
+    "description": "Unveil RF scan controller. Open from the Mosaico desktop; swipe up to return from secondary screens.",
     "category": [
       "utility"
     ]

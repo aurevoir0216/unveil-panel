@@ -1,0 +1,1 @@
+-r ../mosaico/third-party/esp-mosaico-utils/ESP-Iris/components/esp_iris/tools/requirements.txt

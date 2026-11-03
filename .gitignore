@@ -8,3 +8,5 @@ __pycache__/
 **/screen.rle
 **/connection-status.json
 **/ui-status.json
+
+!firmware/mosaico-standalone/resources/apps/unveil/config.json

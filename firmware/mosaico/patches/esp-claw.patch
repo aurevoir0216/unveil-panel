@@ -444,44 +444,47 @@ index dba2698b..9fc86e44 100644
 +
 +int lua_lvgl_scroll_y(lua_State *L);
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_runtime.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_runtime.c
-index 554f8280..4ca8b5a1 100644
+index 554f8280..f495e40d 100644
 --- a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_runtime.c
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_runtime.c
-@@ -8,63 +8,104 @@
+@@ -8,6 +8,8 @@
  static const char *TAG = "lua_lvgl";
  lua_lvgl_state_t s_lvgl;
  
--#define LUA_LVGL_EXIT_STOP_TASK_STACK 3072
--#define LUA_LVGL_EXIT_STOP_TASK_PRIO 5
--#define LUA_LVGL_EXIT_STOP_WAIT_MS 5000
--#define LUA_LVGL_EXIT_STOP_OUTPUT_LEN 256
--
--typedef struct {
--    char job_id[CAP_LUA_JOB_ID_LEN];
--} lua_lvgl_exit_stop_ctx_t;
--
--static volatile bool s_lvgl_exit_stop_pending;
- static char s_lvgl_job_id[CAP_LUA_JOB_ID_LEN];
++static char s_lvgl_job_id[CAP_LUA_JOB_ID_LEN];
++#ifdef UNVEIL_DESKTOP_BUILD
+ #define LUA_LVGL_EXIT_STOP_TASK_STACK 3072
+ #define LUA_LVGL_EXIT_STOP_TASK_PRIO 5
+ #define LUA_LVGL_EXIT_STOP_WAIT_MS 5000
+@@ -18,7 +20,6 @@ typedef struct {
+ } lua_lvgl_exit_stop_ctx_t;
  
--static void lua_lvgl_exit_stop_task(void *arg)
--{
--    char output[LUA_LVGL_EXIT_STOP_OUTPUT_LEN] = {0};
--    lua_lvgl_exit_stop_ctx_t *ctx = arg;
--    esp_err_t err = ESP_ERR_INVALID_ARG;
+ static volatile bool s_lvgl_exit_stop_pending;
+-static char s_lvgl_job_id[CAP_LUA_JOB_ID_LEN];
+ 
+ static void lua_lvgl_exit_stop_task(void *arg)
+ {
+@@ -67,6 +68,114 @@ static void lua_lvgl_exit_request_cb(display_service_session_handle_t session, v
+     }
+ }
+ 
++static int lua_lvgl_shell_exit(lua_State *L)
++{
++    if(!s_lvgl.runtime_initialized || s_lvgl.runtime_owner!=L) return luaL_error(L,"shell_exit requires UI owner");
++    esp_err_t err=lua_lvgl_lock();if(err!=ESP_OK)return lua_lvgl_error_esp(L,"shell exit",err);
++    err=display_service_set_exit_gesture_enabled(s_lvgl.display_session,lua_toboolean(L,1));
++    lua_lvgl_unlock();if(err!=ESP_OK)return lua_lvgl_error_esp(L,"shell exit",err);return 0;
++}
++#endif
++
++
 +static unsigned s_batch_depth;
 +static uint32_t s_frame_sequence;
 +static struct {
 +    int64_t window_start, frame_start, total_us, max_us;
 +    uint32_t frames;
 +} s_render_stats;
- 
--    if (ctx != NULL) {
--        err = cap_lua_stop_job(ctx->job_id, LUA_LVGL_EXIT_STOP_WAIT_MS, output, sizeof(output));
--    }
--    if (err != ESP_OK) {
--        ESP_LOGW(TAG, "exit gesture stop Lua job failed: %s output=%s", esp_err_to_name(err), output);
--    } else {
--        ESP_LOGI(TAG, "exit gesture requested Lua job stop: %s", output);
++
 +static void lua_lvgl_profile_cb(lv_event_t *event)
 +{
 +    const int64_t now = esp_timer_get_time();
@@ -494,17 +497,11 @@ index 554f8280..4ca8b5a1 100644
 +        ++s_render_stats.frames;
 +        ++s_frame_sequence;
 +        s_render_stats.frame_start = 0;
-     }
--    free(ctx);
--    s_lvgl_exit_stop_pending = false;
--    vTaskDelete(NULL);
- }
- 
--static void lua_lvgl_exit_request_cb(display_service_session_handle_t session, void *user_ctx)
++    }
++}
++
 +static int lua_lvgl_render_stats(lua_State *L)
- {
--    (void)session;
--    (void)user_ctx;
++{
 +    const bool reset = lua_toboolean(L, 1);
 +    if (!s_lvgl.runtime_initialized || s_lvgl.runtime_owner != L)
 +        return luaL_error(L, "render_stats requires the active LVGL owner");
@@ -530,14 +527,7 @@ index 554f8280..4ca8b5a1 100644
 +    for(int i=0;i<6;++i){lua_pushinteger(L,present[i]);lua_setfield(L,-2,present_names[i]);lua_pushinteger(L,tx[i]);lua_setfield(L,-2,tx_names[i]);}
 +    return 1;
 +}
- 
--    if (s_lvgl_exit_stop_pending) {
--        return;
--    }
--    if (!s_lvgl_job_id[0]) {
--        ESP_LOGE(TAG, "exit gesture ignored: Lua job ID unavailable");
--        return;
--    }
++
 +static int lua_lvgl_present_status(lua_State *L)
 +{
 +    if(!s_lvgl.runtime_initialized||s_lvgl.runtime_owner!=L)return luaL_error(L,"present_status requires UI owner");
@@ -550,19 +540,7 @@ index 554f8280..4ca8b5a1 100644
 +    for(int i=0;i<4;++i){lua_pushinteger(L,value[i]);lua_setfield(L,-2,keys[i]);}
 +    lua_pushinteger(L,sequence);lua_setfield(L,-2,"sequence");return 1;
 +}
- 
--    lua_lvgl_exit_stop_ctx_t *ctx = calloc(1, sizeof(*ctx));
--    if (ctx == NULL) {
--        ESP_LOGE(TAG, "exit gesture stop context allocation failed");
--        return;
--    }
--    strlcpy(ctx->job_id, s_lvgl_job_id, sizeof(ctx->job_id));
--    s_lvgl_exit_stop_pending = true;
--    if (xTaskCreate(lua_lvgl_exit_stop_task, "lua_lvgl_exit", LUA_LVGL_EXIT_STOP_TASK_STACK,
--                    ctx, LUA_LVGL_EXIT_STOP_TASK_PRIO, NULL) != pdPASS) {
--        s_lvgl_exit_stop_pending = false;
--        free(ctx);
--        ESP_LOGE(TAG, "exit gesture stop task creation failed");
++
 +static int lua_lvgl_set_gesture_options(lua_State *L)
 +{
 +    luaL_checktype(L, 1, LUA_TTABLE);
@@ -578,7 +556,7 @@ index 554f8280..4ca8b5a1 100644
 +            lv_indev_set_scroll_limit(indev, limit);
 +            lv_indev_set_scroll_throw(indev, inertia);
 +        }
-     }
++    }
 +    lua_lvgl_unlock(); return 0;
 +}
 +
@@ -596,19 +574,42 @@ index 554f8280..4ca8b5a1 100644
 +    display_service_unlock();
 +    if (result != LUA_OK) return lua_error(L);
 +    return 0;
- }
- 
++}
++
  esp_err_t lua_lvgl_lock(void)
-@@ -290,7 +331,7 @@ static int lua_lvgl_init(lua_State *L)
+ {
+     esp_err_t err;
+@@ -168,6 +277,7 @@ static void lua_lvgl_delete_owned_objects_locked(void)
+ 
+ static void lua_lvgl_release_runtime_locked(void)
+ {
++    extern void unveil_scan_key_disable(void);unveil_scan_key_disable();
+     /* Snapshot the owner before deleting LVGL objects: LV_EVENT_DELETE fills
+      * pending_unrefs, and those refs must be drained against the live Lua
+      * state while we are still on the script task. */
+@@ -249,6 +359,9 @@ static int lua_lvgl_init(lua_State *L)
+     lv_obj_t *root_screen = NULL;
+     display_service_session_handle_t session = NULL;
+     esp_err_t err;
++#ifdef UNVEIL_DESKTOP_BUILD
++    bool hold_first_frame=lua_lvgl_opt_table(L,1) && lua_lvgl_get_opt_bool_field(L,1,"hold_first_frame",false);
++#endif
+ 
+     if (lua_lvgl_opt_table(L, 6)) {
+         buffer_lines = lua_lvgl_get_opt_int_field(L, 6, "buffer_lines", buffer_lines);
+@@ -290,7 +403,11 @@ static int lua_lvgl_init(lua_State *L)
          .flags = DISPLAY_SERVICE_SESSION_FLAG_RESTORE_DEFAULT_ON_RELEASE |
                   DISPLAY_SERVICE_SESSION_FLAG_ALLOW_SYSTEM_OVERLAY,
          .cleanup_cb = lua_lvgl_session_cleanup_cb,
--        .exit_request_cb = lua_lvgl_exit_request_cb,
++#ifdef UNVEIL_DESKTOP_BUILD
+         .exit_request_cb = lua_lvgl_exit_request_cb,
++#else
 +        .exit_request_cb = NULL,
++#endif
          .display_config = {
              .buffer_lines = (uint32_t)buffer_lines,
              .tick_ms = (uint32_t)tick_ms,
-@@ -339,6 +380,10 @@ static int lua_lvgl_init(lua_State *L)
+@@ -339,9 +456,18 @@ static int lua_lvgl_init(lua_State *L)
      s_lvgl.task_period_ms = (uint32_t)task_period_ms;
      s_lvgl.display = display;
      s_lvgl.root_screen = root_screen;
@@ -619,7 +620,15 @@ index 554f8280..4ca8b5a1 100644
      s_lvgl.runtime_initialized = true;
      s_lvgl.runtime_owner = L;
      s_lvgl.task_stop = false;
-@@ -356,6 +401,7 @@ static int lua_lvgl_deinit(lua_State *L)
++#ifdef UNVEIL_DESKTOP_BUILD
++    if(lua_lvgl_opt_table(L,1) && lua_lvgl_get_opt_bool_field(L,1,"unveil_input",false)){extern void unveil_scan_key_enable(void);unveil_scan_key_enable();}
++    /* Ordinary factory LVGL apps do not use Unveil's explicit first-frame handoff. */
++    if(!hold_first_frame){extern bool unveil_release_boot_frame(lv_display_t*);unveil_release_boot_frame(display);}
++#endif
+     lua_lvgl_unlock();
+ 
+     lua_pushboolean(L, 1);
+@@ -356,6 +482,7 @@ static int lua_lvgl_deinit(lua_State *L)
          return luaL_error(L, "lvgl runtime is owned by another Lua runtime");
      }
  
@@ -627,10 +636,13 @@ index 554f8280..4ca8b5a1 100644
      err = lua_lvgl_deinit_runtime();
  
      if (err != ESP_OK) {
-@@ -380,6 +426,21 @@ void lua_lvgl_exit_cleanup(lua_State *L)
+@@ -380,6 +507,24 @@ void lua_lvgl_exit_cleanup(lua_State *L)
  }
  
  const luaL_Reg lua_lvgl_runtime_funcs[] = {
++#ifdef UNVEIL_DESKTOP_BUILD
++    {"shell_exit",lua_lvgl_shell_exit},
++#endif
 +    {"scan_key",lua_lvgl_scan_key},
 +    {"ui_tree",lua_lvgl_ui_tree},
 +    {"present_ready",lua_lvgl_present_ready},
@@ -651,10 +663,10 @@ index 554f8280..4ca8b5a1 100644
      {NULL, NULL},
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c
 new file mode 100644
-index 00000000..4ff63dbb
+index 00000000..fc431dca
 --- /dev/null
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c
-@@ -0,0 +1,558 @@
+@@ -0,0 +1,562 @@
 +#include "lua_lvgl_private.h"
 +#include <stdatomic.h>
 +#include "src/misc/cache/instance/lv_image_cache.h"
@@ -1173,6 +1185,10 @@ index 00000000..4ff63dbb
 +
 +/* Board ISR/task callbacks only signal; all UI/network work stays on the Lua owner. */
 +static atomic_bool unveil_scan_key_pending;
++static atomic_bool unveil_scan_key_enabled;
++void unveil_scan_key_enable(void) {atomic_store(&unveil_scan_key_enabled,true);}
++bool unveil_scan_key_is_active(void) {return atomic_load(&unveil_scan_key_enabled);}
++void unveil_scan_key_disable(void) {atomic_store(&unveil_scan_key_enabled,false);atomic_store(&unveil_scan_key_pending,false);}
 +void unveil_scan_key_press(void) {atomic_store(&unveil_scan_key_pending,true);}
 +int lua_lvgl_scan_key(lua_State *L)
 +{
@@ -1182,7 +1198,7 @@ index 00000000..4ff63dbb
 +        unveil_scan_key_press();lua_pushboolean(L,true);return 1;
 +    }
 +    if(!s_lvgl.runtime_initialized||s_lvgl.runtime_owner!=L)return luaL_error(L,"scan_key requires UI owner");
-+    lua_pushboolean(L,atomic_exchange(&unveil_scan_key_pending,false));return 1;
++    atomic_store(&unveil_scan_key_enabled,true);lua_pushboolean(L,atomic_exchange(&unveil_scan_key_pending,false));return 1;
 +}
 +int lua_lvgl_pager_motion(lua_State *L)
 +{

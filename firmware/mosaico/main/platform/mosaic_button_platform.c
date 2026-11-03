@@ -20,6 +20,9 @@ static const char *TAG = "mosaic_button";
 
 #if CONFIG_ESP_BOARD_DEV_BUTTON_SUPPORT
 
+extern bool unveil_scan_key_is_active(void);
+extern void unveil_scan_key_press(void);
+static bool s_unveil_press_handled;
 static bool s_back_button_ready;
 static bool s_action_button_registered;
 
@@ -49,6 +52,8 @@ static void back_button_down_cb(void *button_handle, void *user_data)
      * power on the board started before registration and must not turn its
      * eventual release into a Home -> Lock transition. */
     s_back_button_ready = true;
+    s_unveil_press_handled = unveil_scan_key_is_active();
+
 }
 
 static void back_button_cb(void *button_handle, void *user_data)
@@ -61,6 +66,7 @@ static void back_button_cb(void *button_handle, void *user_data)
         return;
     }
 
+    if (s_unveil_press_handled) {s_unveil_press_handled=false;if(unveil_scan_key_is_active())unveil_scan_key_press();return;}
     esp_err_t err = mosaic_ui_back();
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "queue top-key Back failed: %s", esp_err_to_name(err));

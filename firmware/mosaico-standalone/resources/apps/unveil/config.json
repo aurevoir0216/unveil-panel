@@ -1,0 +1,12 @@
+{
+  "pi_url": "",
+  "dark": true,
+  "language": "en",
+  "capture_seconds": 2,
+  "analysis_seconds": 2,
+  "discovery_min_rounds": 3,
+  "mode": "scan",
+  "history_newest": true,
+  "sound_muted": false,
+  "sound_volume": 40
+}

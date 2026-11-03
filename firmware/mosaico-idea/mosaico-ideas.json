@@ -1,0 +1,38 @@
+{
+  "schema": "mosaico-ideas/project-release/1",
+  "project": {
+    "title": "Unveil",
+    "categories": [
+      "display",
+      "communication"
+    ],
+    "license": "Apache-2.0"
+  },
+  "firmware": "build/unveil_idea-system-update.irisfw",
+  "website": {
+    "readme": "README.md",
+    "attachments": [
+      "assets/Noto-OFL.txt",
+      "assets/Apache-2.0.txt"
+    ]
+  },
+  "device": {
+    "default_locale": "zh-CN",
+    "presentations": {
+      "zh-CN": {
+        "mode": "generate",
+        "name": "Unveil",
+        "description": "采集 分析 图表 历史",
+        "font": "assets/Unveil-Text-Readable.ttf",
+        "icon": "assets/icon.png"
+      },
+      "en": {
+        "mode": "generate",
+        "name": "Unveil",
+        "description": "RF scan and charts",
+        "font": "assets/Unveil-Text-Readable.ttf",
+        "icon": "assets/icon.png"
+      }
+    }
+  }
+}
