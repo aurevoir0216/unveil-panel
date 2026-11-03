@@ -10,7 +10,7 @@
 | Desktop 桌面应用固件 | 保留原 Mosaico 桌面，点击圆形 Unveil 图标打开应用 | [mosaico](firmware/mosaico/) |
 | Idea 应用包 | 使用 Vibe Mode 安装 `.irisfw`，切换进入 Unveil | [mosaico-idea](firmware/mosaico-idea/) |
 
-**三个新版本均为构建候选版，尚未完成新启动路径的真机验收。** 本轮没有切换设备固件。安装和验证边界见 [版本说明](docs/distributions.md)。
+**三个新版本均为构建候选版，尚未完成新启动路径的真机验收。** v0.20 打包阶段没有切换设备固件；后续 Idea 真机测试发现并修正了独立运行层的内部内存压力问题，完整验收仍在进行。已发布 v0.20 附件未包含后续修正。安装和验证边界见 [版本说明](docs/distributions.md)。
 
 ![Unveil 雷达](docs/images/radar.png)
 

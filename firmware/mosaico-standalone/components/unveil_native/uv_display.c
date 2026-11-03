@@ -15,7 +15,7 @@
 #include <stdatomic.h>
 struct uv_display_session {uv_display_session_config_t config;bool active;};
 static struct uv_display_session session;
-static SemaphoreHandle_t mutex,tx_done,te_edge;
+static SemaphoreHandle_t mutex,tx_done,te_edge,capture_done;
 static esp_lcd_panel_handle_t panel;
 static esp_lcd_touch_handle_t touch;
 static lv_display_t *display;
@@ -26,6 +26,11 @@ static bool first_frame_ready;
 static atomic_uint submitted,transferred,presented;
 static atomic_bool tx_busy;
 static unsigned tx_frame;
+static uint8_t *capture_pixels;
+static bool capture_drawing,capture_requested;
+static bool injected_pressed;
+static uint16_t injected_x, injected_y;
+static int64_t last_physical_touch, injection_time;
 static bool tx_last,frame_start=true;
 static atomic_uint tx_bytes,tx_frames;
 static void tick(void *arg){(void)arg;lv_tick_inc(1);}
@@ -36,10 +41,64 @@ static void flush(lv_display_t *d,const lv_area_t *area,uint8_t *data){
  if(frame_start){while(xSemaphoreTake(te_edge,0)==pdTRUE){};if(xSemaphoreTake(te_edge,pdMS_TO_TICKS(100))!=pdTRUE)abort();atomic_fetch_add(&submitted,1);frame_start=false;}
  while(xSemaphoreTake(tx_done,0)==pdTRUE){};tx_frame=atomic_load(&submitted);tx_last=lv_display_flush_is_last(d);frame_start=tx_last;atomic_store(&tx_busy,true);
  atomic_fetch_add(&tx_bytes,(area->x2-area->x1+1)*(area->y2-area->y1+1)*2);
+ if(capture_drawing){
+  size_t width=(size_t)(area->x2-area->x1+1);
+  for(int y=area->y1;y<=area->y2;++y)
+   memcpy(capture_pixels+((size_t)y*480+area->x1)*2,
+          data+(size_t)(y-area->y1)*width*2,width*2);
+ }
  lv_draw_sw_rgb565_swap(data,lv_area_get_size(area));
  ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel,area->x1,area->y1,area->x2+1,area->y2+1,data));
 }
-static void read_touch(lv_indev_t *i,lv_indev_data_t *data){(void)i;uint16_t x,y;uint8_t n=0;esp_lcd_touch_read_data(touch);bool pressed=esp_lcd_touch_get_coordinates(touch,&x,&y,NULL,&n,1);data->state=pressed&&n?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;if(pressed&&n){data->point.x=x;data->point.y=y;}}
+static void read_touch(lv_indev_t *i,lv_indev_data_t *data)
+{
+ (void)i;
+ uint16_t x,y;uint8_t n=0;
+ esp_lcd_touch_read_data(touch);
+ bool physical=esp_lcd_touch_get_coordinates(touch,&x,&y,NULL,&n,1)&&n;
+ int64_t now=esp_timer_get_time();
+ if(physical){last_physical_touch=now;injected_pressed=false;}
+ if(injected_pressed&&now-injection_time>2000000)injected_pressed=false;
+ data->state=physical||injected_pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;
+ if(physical){data->point.x=x;data->point.y=y;}
+ else{data->point.x=injected_x;data->point.y=injected_y;}
+}
+/* On-demand actual flush capture: no permanent framebuffer or per-frame copy. */
+esp_err_t uv_display_capture_begin(void)
+{
+ esp_err_t error=uv_display_lock();if(error!=ESP_OK)return error;
+ if(capture_pixels||!first_frame_ready){uv_display_unlock();return ESP_ERR_INVALID_STATE;}
+ capture_pixels=heap_caps_calloc(480*480,2,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+ if(!capture_pixels){uv_display_unlock();return ESP_ERR_NO_MEM;}
+ while(xSemaphoreTake(capture_done,0)==pdTRUE){}
+ capture_requested=true;uv_display_unlock();
+ /* Rendering belongs to the LVGL task's large stack, never the Iris worker. */
+ if(xSemaphoreTake(capture_done,pdMS_TO_TICKS(5000))==pdTRUE)return ESP_OK;
+ uv_display_capture_end();return ESP_ERR_TIMEOUT;
+}
+esp_err_t uv_display_capture_read(size_t offset,void *out,size_t capacity,size_t *size)
+{
+ esp_err_t error=uv_display_lock();if(error!=ESP_OK)return error;
+ if(!capture_pixels||offset>=480*480*2){uv_display_unlock();return ESP_ERR_INVALID_STATE;}
+ *size=480*480*2-offset;if(*size>capacity)*size=capacity;
+ memcpy(out,capture_pixels+offset,*size);uv_display_unlock();return ESP_OK;
+}
+void uv_display_capture_end(void)
+{
+ if(uv_display_lock()!=ESP_OK)return;
+ capture_requested=false;capture_drawing=false;heap_caps_free(capture_pixels);capture_pixels=NULL;uv_display_unlock();
+}
+esp_err_t uv_display_pointer(uint16_t x,uint16_t y,bool pressed)
+{
+ if(x>=480||y>=480)return ESP_ERR_INVALID_ARG;
+ esp_err_t error=uv_display_lock();if(error!=ESP_OK)return error;
+ int64_t now=esp_timer_get_time();
+ if(pressed&&last_physical_touch&&now-last_physical_touch<2000000){
+  uv_display_unlock();return ESP_ERR_INVALID_STATE;
+ }
+ injected_x=x;injected_y=y;injected_pressed=pressed;injection_time=now;
+ uv_display_unlock();return ESP_OK;
+}
 static void boot_logo(void)
 {
     boot_screen=lv_screen_active();
@@ -48,9 +107,12 @@ static void boot_logo(void)
     lv_obj_t *word=lv_label_create(boot_screen);lv_label_set_text(word,"Unveil");lv_obj_set_style_text_color(word,lv_color_hex(0xf54b2c),0);if(boot_font)lv_obj_set_style_text_font(word,boot_font,0);lv_obj_center(word);
     lv_refr_now(display);flush_wait(display);lv_display_flush_ready(display);ESP_ERROR_CHECK(bsp_display_brightness_set(100));
 }
-static void lvgl_task(void *arg){(void)arg;for(;;){xSemaphoreTakeRecursive(mutex,portMAX_DELAY);uint32_t wait=lv_timer_handler();xSemaphoreGiveRecursive(mutex);vTaskDelay(pdMS_TO_TICKS(wait>5?5:wait<1?1:wait));}}
+static void lvgl_task(void *arg){(void)arg;for(;;){xSemaphoreTakeRecursive(mutex,portMAX_DELAY);uint32_t wait=lv_timer_handler();if(capture_requested){
+ capture_requested=false;capture_drawing=true;lv_obj_invalidate(lv_screen_active());lv_refr_now(display);
+ flush_wait(display);lv_display_flush_ready(display);capture_drawing=false;xSemaphoreGive(capture_done);
+ }xSemaphoreGiveRecursive(mutex);vTaskDelay(pdMS_TO_TICKS(wait>5?5:wait<1?1:wait));}}
 esp_err_t uv_display_init(void){
- mutex=xSemaphoreCreateRecursiveMutex();tx_done=xSemaphoreCreateBinary();te_edge=xSemaphoreCreateBinary();if(!mutex||!tx_done||!te_edge)return ESP_ERR_NO_MEM;
+ mutex=xSemaphoreCreateRecursiveMutex();tx_done=xSemaphoreCreateBinary();te_edge=xSemaphoreCreateBinary();capture_done=xSemaphoreCreateBinary();if(!mutex||!tx_done||!te_edge||!capture_done)return ESP_ERR_NO_MEM;
  bsp_display_config_t cfg=BSP_DISPLAY_DEFAULT_CONFIG();ESP_ERROR_CHECK(bsp_display_new(&cfg,&panel));ESP_ERROR_CHECK(bsp_display_brightness_set(0));ESP_ERROR_CHECK(bsp_touch_new(cfg.rotation,&touch));
  esp_lcd_panel_io_callbacks_t callbacks={.on_color_trans_done=tx_irq};ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(bsp_display_get_panel_io(),&callbacks,NULL));
  gpio_config_t te={.pin_bit_mask=1ULL<<BSP_LCD_TE,.mode=GPIO_MODE_INPUT,.intr_type=GPIO_INTR_POSEDGE};ESP_ERROR_CHECK(gpio_config(&te));esp_err_t error=gpio_install_isr_service(0);if(error!=ESP_OK&&error!=ESP_ERR_INVALID_STATE)return error;ESP_ERROR_CHECK(gpio_isr_handler_add(BSP_LCD_TE,te_irq,NULL));

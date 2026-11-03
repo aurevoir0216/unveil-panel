@@ -57,7 +57,19 @@ static int call(lua_State *L){
 }
 static int open_capability(lua_State *L){lua_newtable(L);lua_pushcfunction(L,call);lua_setfield(L,-2,"call");return 1;}
 static int open_modules(lua_State *L){luaL_openlibs(L);for(unsigned i=0;i<module_count;i++){luaL_requiref(L,modules[i].name,modules[i].open,0);lua_pop(L,1);}return 0;}
-lua_State *uv_new_state(void){lua_State *L=luaL_newstate();if(!L)return NULL;lua_pushcfunction(L,open_modules);if(lua_pcall(L,0,0,0)!=LUA_OK){lua_close(L);return NULL;}return L;}
+/* Lua has many small strings/tables. Keep them in external RAM too, so
+ * Wi-Fi, file locks and task control blocks retain internal memory. */
+static void *lua_external_alloc(void *context, void *pointer, size_t old_size, size_t new_size)
+{
+    (void)context;
+    (void)old_size;
+    if (!new_size) {
+        heap_caps_free(pointer);
+        return NULL;
+    }
+    return heap_caps_realloc(pointer, new_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
+lua_State *uv_new_state(void){lua_State *L=lua_newstate(lua_external_alloc,NULL,luaL_makeseed(NULL));if(!L)return NULL;lua_pushcfunction(L,open_modules);if(lua_pcall(L,0,0,0)!=LUA_OK){lua_close(L);return NULL;}return L;}
 esp_err_t uv_runtime_init(void){ESP_ERROR_CHECK(lua_module_json_register());ESP_ERROR_CHECK(lua_module_storage_register());ESP_ERROR_CHECK(lua_module_delay_register());ESP_ERROR_CHECK(lua_module_lvgl_register_with_data_root("/data"));ESP_ERROR_CHECK(uv_register_module("system",open_system));ESP_ERROR_CHECK(uv_register_module("thread",uv_open_thread));return uv_register_module("capability",open_capability);}
-static void ui_task(void *arg){(void)arg;lua_State *L=uv_new_state();if(!L){ESP_LOGE("unveil","Lua allocation failed");vTaskDelete(NULL);return;}uv_attach_job(L,NULL);int result=luaL_dofile(L,"/data/apps/unveil/scripts/unveil.lua");if(result!=LUA_OK)ESP_LOGE("unveil","UI stopped: %s",lua_tostring(L,-1));uv_cleanup(L);lua_close(L);vTaskDelete(NULL);}
+static void ui_task(void *arg){(void)arg;lua_State *L=uv_new_state();if(!L){ESP_LOGE("unveil","Lua allocation failed");vTaskDelete(NULL);return;}ESP_LOGI("unveil","UI start internal=%u largest=%u psram=%u",(unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),(unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),(unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));uv_attach_job(L,NULL);int result=luaL_dofile(L,"/data/apps/unveil/scripts/unveil.lua");if(result!=LUA_OK)ESP_LOGE("unveil","UI stopped: %s",lua_tostring(L,-1));uv_cleanup(L);lua_close(L);vTaskDelete(NULL);}
 esp_err_t uv_runtime_start(void){return xTaskCreate(ui_task,"unveil_ui",24576,NULL,4,NULL)==pdPASS?ESP_OK:ESP_ERR_NO_MEM;}

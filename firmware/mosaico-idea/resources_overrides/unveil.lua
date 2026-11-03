@@ -125,6 +125,7 @@ local function request_scan()
 end
 request_history=function()
  local now=system.millis()
+ if cfg.pi_url=='' then history_next_poll=now+5000;return end
  -- A completed producer can still have queued batches. Do not replace its
  -- generation or partial buffer until the UI consumes the final message.
  if history_loading then

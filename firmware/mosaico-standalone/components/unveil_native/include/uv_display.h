@@ -16,3 +16,9 @@ esp_err_t uv_display_open(const uv_display_session_config_t*,uv_display_session_
 esp_err_t uv_display_close(uv_display_session_handle_t);
 lv_display_t *uv_display_session_display(uv_display_session_handle_t);
 esp_err_t uv_display_session_load_screen_locked(uv_display_session_handle_t,lv_obj_t*);
+
+/* Bounded diagnostics used by the Idea adapter; physical touch takes priority. */
+esp_err_t uv_display_capture_begin(void);
+esp_err_t uv_display_capture_read(size_t,void*,size_t,size_t*);
+void uv_display_capture_end(void);
+esp_err_t uv_display_pointer(uint16_t,uint16_t,bool);
