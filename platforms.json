@@ -1,0 +1,12 @@
+{
+  "mosaico": {
+    "status": "supported",
+    "soc": "esp32s31",
+    "source": "firmware/mosaico",
+    "release_tag": "mosaico-v0.1.0-20261103",
+    "display": [
+      480,
+      480
+    ]
+  }
+}

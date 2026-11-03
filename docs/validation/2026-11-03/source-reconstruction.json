@@ -1,0 +1,12 @@
+{
+  "esp-claw": {
+    "patch_applies_to_pinned_upstream": true,
+    "reconstructed_files_match_current_source": true,
+    "files": 21
+  },
+  "esp-idf": {
+    "patch_applies_to_pinned_upstream": true,
+    "reconstructed_files_match_current_source": true,
+    "files": 3
+  }
+}

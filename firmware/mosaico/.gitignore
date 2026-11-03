@@ -1,0 +1,49 @@
+# Build output
+build
+build_*
+build-*/
+build-host/
+tmp/
+firmware_output/
+
+# ESP-IDF
+sdkconfig
+sdkconfig.old
+sdkconfig.priv
+sdkconfig.bmgr_board.old
+managed_components/
+
+# IDE / Editor
+.vscode/
+.devcontainer/
+.idea/
+.clangd
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.local-components/
+# Cache / Compiled
+.cache
+*.pyc
+
+# MCP / Memov
+.mcp.json
+.mem/
+.memignore
+# OS
+.DS_Store
+Thumbs.db
+.venv/
+
+.codex
+
+# Docs
+docs/node_modules
+docs/public/d2
+docs/dist
+docs/.astro
+docs/**/*.bin
+components/common/mosaic_ui/docs/

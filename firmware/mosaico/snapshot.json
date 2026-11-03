@@ -1,0 +1,37 @@
+{
+  "snapshot_date": "2026-11-03",
+  "platform": "mosaico",
+  "soc": "esp32s31",
+  "screen": [
+    480,
+    480
+  ],
+  "upstream": {
+    "esp-mosaico-claw": {
+      "url": "https://github.com/esp-mosaico/esp-mosaico-claw.git",
+      "commit": "2654a4a9f76f5d7ea108e4dff7ade7b1df4c1c5c"
+    },
+    "esp-claw": {
+      "url": "https://github.com/espressif/esp-claw.git",
+      "commit": "9b23c15bc28703369b4b7fad3e810f8cb535fb59"
+    },
+    "esp-mosaico-utils": {
+      "url": "https://github.com/esp-mosaico/esp-mosaico-utils.git",
+      "commit": "be151ae047014e79a9c7ae0092dd203844499003"
+    },
+    "esp-idf": {
+      "url": "https://github.com/espressif/esp-idf.git",
+      "commit": "7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe"
+    }
+  },
+  "firmware": {
+    "path": "releases/2026-11-03/unveil-mosaico.bin",
+    "sha256": "d49b423d26f9ea92d4112199391e1c006535273fa6a34dd8a36621504f6523ec",
+    "bytes": 5151072,
+    "flash_address": "0x210000",
+    "partition": "main_app",
+    "flash_size": "16MB"
+  },
+  "app": "app",
+  "note": "Main-partition upgrade for the verified existing Mosaico Recovery ABI 2/layout 5; not a merged full-flash image. App files also required on NAND."
+}

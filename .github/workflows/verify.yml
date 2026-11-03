@@ -1,0 +1,22 @@
+name: Verify source snapshot
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify packaged source, app resources and firmware
+        run: python tools/verify_snapshot.py
+      - name: Check Python utilities
+        run: python -m py_compile tools/verify_snapshot.py firmware/mosaico/tools/prepare.py firmware/mosaico/tools/install_app.py

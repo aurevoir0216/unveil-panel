@@ -1,0 +1,7 @@
+[submodule "firmware/mosaico/third-party/esp-claw"]
+	path = firmware/mosaico/third-party/esp-claw
+	url = https://github.com/espressif/esp-claw.git
+
+[submodule "firmware/mosaico/third-party/esp-mosaico-utils"]
+	path = firmware/mosaico/third-party/esp-mosaico-utils
+	url = https://github.com/esp-mosaico/esp-mosaico-utils.git

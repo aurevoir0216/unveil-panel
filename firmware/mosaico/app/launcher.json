@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "unveil",
+  "entry": "scripts/unveil.lua",
+  "display_name": "Unveil",
+  "args": {},
+  "order": 30,
+  "visible": true,
+  "catalog": {
+    "description": "Unveil RF scan controller for ESP-Mosaico. Boots directly into Unveil; swipe up to return from secondary screens.",
+    "category": [
+      "utility"
+    ]
+  },
+  "icon": "assets/icon.jpg"
+}

@@ -1,0 +1,7 @@
+{
+  "exact_900_second_expiry": true,
+  "hard_link_cleanup_preserves_original_IQ": true,
+  "next_run_discards_previous_test": true,
+  "active_test_not_deleted": true,
+  "symlinks_and_real_jobs_not_followed": true
+}

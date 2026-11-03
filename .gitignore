@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.venv/
+/dist/
+**/config.json
+**/screen.rle
+**/connection-status.json
+**/ui-status.json
