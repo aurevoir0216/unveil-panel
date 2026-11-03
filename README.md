@@ -8,6 +8,12 @@ Unveil Panel 需要连接运行中的 Unveil 后端。连接后，可以在 480 
 
 ![Unveil 界面预览，包含启动页、扫描雷达、设置圆盘、频谱、STFT 时频图和 Activity 相对功率图](docs/images/unveil-overview.png)
 
+## 移植与真机实测
+
+这个面板移植自另一个射频项目的网页控制界面，用来测试 ESP32-S31 的实时图形显示能力。测试在 ESP-Mosaico 的 480 × 480 触屏上进行，覆盖雷达扫掠动画、滑动切页和信号图表绘制。
+
+真机连接 Unveil 后端后，在覆盖后端分析和图表准备的 5 秒采样窗口内，扫描界面的渲染帧率为 **33–37 FPS**。
+
 ## 上手
 
 1. 在 Release 下载名称包含 `idea` 的 `.irisfw`，按 ESP-Mosaico 的 Vibe Mode 更新流程安装。
