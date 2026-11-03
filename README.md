@@ -9,22 +9,20 @@
 | Idea 独立运行版 | 保留原厂引导与 Vibe Mode，开机直接进入 Unveil，不加载 Mosaico 桌面或 Claw 框架 | [mosaico-idea](firmware/mosaico-idea/) |
 | Desktop 桌面应用版 | 保留 Mosaico 桌面，通过圆形 Unveil 图标打开 | [mosaico](firmware/mosaico/) |
 
-Idea 是安装与分发方式。桌面固件也可打包成 Idea：Vibe Mode 更新固件后，由桌面固件自行安装配套脚本、字体和图标。六位下载编号需要在官方 Ideas 平台创建并发布应用；本地 `.irisfw` 文件本身不产生编号。
+桌面版通过 Vibe Mode 安装固件，正常开机仍进入 Mosaico。桌面固件会自行安装配套脚本、字体和图标。六位下载编号需要在官方 Ideas 平台发布；GitHub 的安装包不提供编号。
 
 **全盘独立版停止更新，源码保留在 [mosaico-standalone](firmware/mosaico-standalone/)，不再提供 Release 附件。** 活跃的 Idea 版使用 [mosaico-core](firmware/mosaico-core/)；后续修复不写回被冻结的全盘工程。
 
-Idea 版现复用桌面版的显示合成、刷屏同步和触摸适配器，开机直接进入 Unveil。修复松开手指时坐标跳变造成的点按失效，真机自动回归已覆盖设置、音量、历史排序和三个图表选项。此前已通过顶部按钮扫描、树莓派完整进度与图表、连续 25 次翻页、圆盘、主题／语言切换和完整资源更新后的设置保留；用户确认雷达闪烁与错位已消失。桌面版新增资源自安装仍待真机验收，发布包继续按候选管理。
+Idea 版复用桌面版的显示合成、刷屏同步和触摸适配器，修复了松开手指时坐标跳变造成的点按失效。真机回归覆盖设置、音量、历史排序、图表切换、顶部按钮和完整扫描。桌面版已在真机验证自动安装应用资源、保留已有设置，以及通过图标启动。
 
 ![Unveil 雷达](docs/images/radar.png)
 
 ## 下载
 
-从 [Releases](https://github.com/aurevoir0216/unveil/releases) 下载带 `desktop` 或 `idea` 名称的文件。标题使用 `Unveil v0.xx`，不单独附带 SHA256 下载文件。
+从 [Unveil v0.1](https://github.com/aurevoir0216/unveil/releases/tag/v0.1) 下载带 `desktop` 或 `idea` 名称的文件。
 
 - 桌面版 ZIP 包含固件与开发用资源上传工具；新版固件在启动时自行补齐桌面应用资源，保留已有设置。
 - Idea 为官方格式 `.irisfw` 安装包；提供文件不代表已上架官方 Ideas 商店或获得六位编号。
-
-旧 `v0.10 / v0.11` 是基于 Mosaico 框架的专用启动版本，不能当作完全独立固件。
 
 ## 界面与数据
 

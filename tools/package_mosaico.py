@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--desktop-bundle', type=Path, required=True)
     parser.add_argument('--idea-bundle', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', default='0.22')
+    parser.add_argument('--version', default='0.1')
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     output = args.output.resolve()

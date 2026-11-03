@@ -5,5 +5,5 @@
 - Desktop boots Mosaico and launches Unveil from its icon. Secondary pages retain swipe-up Back; primary-page shell exit and display handoff remain available.
 - Idea follows the retained Vibe Mode integration contract. Never rename a raw binary or ZIP to .irisfw.
 - Never package personal Wi-Fi credentials, personal server addresses, device NVS, user history or captures. Service defaults remain blank.
-- Release titles use Unveil v0.xx. Do not attach standalone SHA256 files. Internal verification and required bundle hashes are appropriate.
+- Release titles use Unveil v<version>. Do not attach standalone SHA256 files. Internal verification and required bundle hashes are appropriate.
 - Mark new distributions as build candidates until physical acceptance is recorded. Preparing packages does not authorize switching or erasing the device.

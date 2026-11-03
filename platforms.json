@@ -1,20 +1,20 @@
 {
   "mosaico": {
-    "status": "build-candidate",
+    "status": "hardware-verified",
     "soc": "esp32s31",
     "display": [
       480,
       480
     ],
-    "release_tag": "v0.22",
-    "hardware_accepted": false,
+    "release_tag": "v0.1",
+    "hardware_accepted": true,
     "distributions": {
       "desktop": {
         "source": "firmware/mosaico",
         "mosaico_framework": true,
         "entry": "desktop app icon",
         "automatic_app_resources": true,
-        "automatic_resources_hardware_accepted": false
+        "automatic_resources_hardware_accepted": true
       },
       "idea": {
         "source": "firmware/mosaico-idea",
@@ -37,7 +37,6 @@
         "last_release": "v0.21",
         "release_assets": false
       }
-    },
-    "candidate_version": "v0.22"
+    }
   }
 }

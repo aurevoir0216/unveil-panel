@@ -1,6 +1,6 @@
 # Mosaico distributions
 
-Both maintained variants retain the existing Unveil UI and numeric backend protocol. Wi-Fi and service settings start blank. Newly split startup paths are build candidates, not yet hardware-accepted releases.
+Both maintained variants retain the existing Unveil UI and numeric backend protocol. The release files leave Wi-Fi and service defaults blank. Desktop starts in Mosaico; Idea starts in Unveil.
 
 ## Independent Idea application
 
@@ -30,4 +30,4 @@ Both maintained variants pause the sweep while returning to the radar page. Afte
 
 ## Acceptance boundary
 
-Builds, dependency separation, partition fit, privacy checks and bundle inspection are recorded with prepared artifacts. The current Idea path passed normal boot, the physical top button, backend progress through chart preparation and 100%, 25 primary transitions, radial limits, theme/language rebuilds and a complete resource-image update with byte-equal preferences. The user confirmed that physical radar flicker/misalignment disappeared. Desktop local UI and handoff were previously exercised, but the new automatic resource seed still needs device acceptance. Store publication remains separate.
+The Idea path passed normal boot, the physical top button, backend progress through chart preparation and 100%, 25 primary transitions, radial limits, theme/language rebuilds and a complete resource-image update with byte-equal preferences. The Desktop firmware was installed on the same device. All 28 seeded files matched the embedded resources, existing settings were retained, and the physical icon opened Unveil with its loading frame. See [validation records](validation/) for test scope. Store publication remains separate.

@@ -19,7 +19,9 @@ UNVEIL_DISTRIBUTION defaults to desktop. The old dedicated entry remains for leg
 
 ## Installation
 
-The desktop ZIP includes a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow. The normal desktop firmware installs its embedded Unveil app resources into NAND before launcher enumeration, without overwriting config.json. A six-digit Idea distribution can use this same self-contained firmware bundle.
+The desktop ZIP includes a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow. The normal desktop firmware installs its embedded Unveil app resources into NAND before launcher enumeration, without overwriting config.json. On normal boot, open the round Unveil icon from the Mosaico desktop.
+
+When switching from Idea, Vibe Mode 0.2.1 may report the old app partition size during its final boot selection. If the updater confirms the new partition table was committed and the only error is validation against the old 4 MiB partition, restart once to load the committed layout. Keep the device powered while it writes.
 
 For script-only development uploads, use:
 
