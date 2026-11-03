@@ -47,27 +47,39 @@ static void touch_irq(esp_lcd_touch_handle_t tp)
     (void)tp;
     atomic_fetch_add(&touch_sequence, 1);
 }
-static void read_touch(lv_indev_t *indev, lv_indev_data_t *data)
+static esp_err_t read_touch(esp_lcd_touch_handle_t tp,
+                            esp_lcd_touch_point_data_t *points, uint8_t *count,
+                            uint8_t max_count, void *user_ctx)
 {
-    (void)indev;
+    (void)user_ctx;
+    if (!points || !count || !max_count) return ESP_ERR_INVALID_ARG;
     unsigned sequence = atomic_load(&touch_sequence);
     /* As on desktop, idle touch never performs I2C reads under the render
      * lock. Held touches still poll until release if an IRQ edge is lost. */
     if (physical_pressed || sequence != touch_consumed) {
         touch_consumed = sequence;
-        uint8_t count = 0;
+        uint8_t physical_count = 0;
         esp_lcd_touch_point_data_t point = {0};
-        esp_err_t error = esp_lcd_touch_read_data(touch);
+        esp_err_t error = esp_lcd_touch_read_data(tp);
         physical_pressed = error == ESP_OK &&
-            esp_lcd_touch_get_data(touch, &point, &count, 1) == ESP_OK && count;
+            esp_lcd_touch_get_data(tp, &point, &physical_count, 1) == ESP_OK && physical_count;
         if (physical_pressed) { physical_x = point.x; physical_y = point.y; }
     }
     int64_t now = esp_timer_get_time();
     if (physical_pressed) { last_physical_touch = now; injected_pressed = false; }
     if (injected_pressed && now - injection_time > 2000000) injected_pressed = false;
-    data->state = physical_pressed || injected_pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
-    data->point.x = physical_pressed ? physical_x : injected_x;
-    data->point.y = physical_pressed ? physical_y : injected_y;
+    *count = 0;
+    if (physical_pressed || injected_pressed) {
+        points[0] = (esp_lcd_touch_point_data_t) {
+            .x = physical_pressed ? physical_x : injected_x,
+            .y = physical_pressed ? physical_y : injected_y,
+        };
+        *count = 1;
+    }
+    /* The shared desktop input adapter latches the last pressed point when
+     * count becomes zero. A physical lift must never jump to the unrelated
+     * USB-injection coordinates and turn a tap into a pager/list drag. */
+    return ESP_OK;
 }
 static void observe_region(lv_display_t *d, const lv_area_t *area,
                             const void *pixels, size_t stride, void *ctx)
@@ -179,10 +191,12 @@ esp_err_t uv_display_init(void)
     display = esp_lv_adapter_register_display_with_presenter(&profile, &binding);
     if (!display) return ESP_ERR_NO_MEM;
     lv_display_add_event_cb(display, refresh_ready, LV_EVENT_REFR_READY, NULL);
-    lv_indev_t *indev = lv_indev_create();
-    if (!indev) return ESP_ERR_NO_MEM;
-    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-    lv_indev_set_read_cb(indev, read_touch);
+    const esp_lv_adapter_touch_config_t input = {
+        .disp = display, .handle = touch,
+        .scale = {.x = 1.0f, .y = 1.0f},
+        .callbacks = {.custom_touch_read = read_touch},
+    };
+    if (!esp_lv_adapter_register_touch(&input)) return ESP_ERR_NO_MEM;
     ESP_ERROR_CHECK(esp_lcd_touch_register_interrupt_callback(touch, touch_irq));
     atomic_store(&touch_sequence, 1);
     if (!lv_timer_create(housekeeping, 10, NULL)) return ESP_ERR_NO_MEM;
