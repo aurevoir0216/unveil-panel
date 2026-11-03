@@ -4,6 +4,8 @@
 
 [下载 Idea 固件](https://github.com/aurevoir0216/unveil/releases/latest) · [RFPI 接口](docs/backend.md) · [构建与分区](firmware/mosaico-idea/README.md)
 
+![Unveil 界面预览，包含启动页、扫描雷达、设置圆盘、频谱、STFT 时频图和 Activity 相对功率图](docs/images/unveil-overview.png)
+
 ## 上手
 
 1. 在 Release 下载名称包含 `idea` 的 `.irisfw`，按 ESP-Mosaico 的 Vibe Mode 更新流程安装。
