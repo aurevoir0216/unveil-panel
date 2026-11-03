@@ -107,17 +107,16 @@ local scan_start_pending=false
 local scan_requested=false
 local scan_previous_job=''
 local start_feedback
+local scan_visual_wait=false
+local ScanGate=dofile(scripts..'/scan_gate.lua')
 local function start(command)
- if command=='start' and not scan_start_pending then scan_previous_job=state.server_job or state.job or '';scan_requested=true;scan_start_pending=true; completion:reset();run_generation=run_generation+1;session_started=false;chart_prepare_job=nil;chart_prepare_progress=0;chart_prepare_failed=false;state={online=state.online,test=state.test,state='ready',running=false,percent=0,captured=0,analyzed=0,selected=0,job=''};dirty=true;last_signature=nil;chart_epoch=chart_epoch+1;chart_data=nil;details_signature=nil;if lvgl.chart_clear then lvgl.chart_clear() end;if primary_tiles and paint_details then paint_details(primary_tiles[3]) end end
+ if command=='start' and not scan_start_pending then scan_visual_wait=true;haptics:started(true);start_feedback=ScanGate.new(true);if radar then radar:set_sweeping(false) end;scan_previous_job=state.server_job or state.job or '';scan_requested=true;scan_start_pending=true; completion:reset();run_generation=run_generation+1;session_started=false;chart_prepare_job=nil;chart_prepare_progress=0;chart_prepare_failed=false;state={online=state.online,test=state.test,state='ready',running=false,percent=0,captured=0,analyzed=0,selected=0,job=''};dirty=true;last_signature=nil;chart_epoch=chart_epoch+1;chart_data=nil;details_signature=nil;if lvgl.chart_clear then lvgl.chart_clear() end;if primary_tiles and paint_details then paint_details(primary_tiles[3]) end end
  if pending or active() then if command then queued_command=command end;return end
- if cfg.pi_url=='' then return end
+ if cfg.pi_url=='' then if command then scan_start_pending=false;scan_visual_wait=false;start_feedback=nil end;return end
  if command then queued_command=nil end
  local started,err=thread.start(scripts..'/worker.lua',{url=cfg.pi_url,replay_job='',queue=queue,command=command,previous_job=scan_previous_job,request_generation=run_generation,session_started=session_started,seconds=cfg.capture_seconds,analysis_seconds=cfg.analysis_seconds,discovery_min_rounds=cfg.discovery_min_rounds,mode=cfg.analysis_seconds==0 and 'collect' or 'scan'},{name=job,exclusive=job,replace=false,timeout_ms=40000,defer=true})
- if started and command=='start' then
-  haptics:started(true);local p=lvgl.present_status();start_feedback={sequence=p.sequence,generation=p.generation}
- end
  pending=not not started
- if not started then scan_start_pending=false;state={online=false,state='offline'};print(tostring(err)) end
+ if not started then scan_start_pending=false;scan_visual_wait=false;start_feedback=nil;haptics:cancel_start();state={online=false,state='offline'};print(tostring(err)) end
 end
 local function request_scan()
  if state.running or scan_start_pending then return false end
@@ -278,7 +277,7 @@ local function set_visible(o,v) if v then o:clear_flag('HIDDEN') else o:add_flag
 local function refresh_actual()
  if dirty or sub or paging or not home then return end
  local kind=state.state or 'offline'
- local sig=table.concat({kind,tostring(state.running),tostring(state.online),tostring(state.percent),tostring(state.captured),tostring(state.analyzed),tostring(state.selected),tostring(state.mode),tostring(cfg.analysis_seconds),tostring(chart_prepare_progress)},'|')
+ local sig=table.concat({kind,tostring(state.running),tostring(state.online),tostring(state.percent),tostring(state.captured),tostring(state.analyzed),tostring(state.selected),tostring(state.mode),tostring(cfg.analysis_seconds),tostring(chart_prepare_progress),tostring(scan_visual_wait)},'|')
  if sig==last_signature then return end
  last_signature=sig
  if connection_label then connection_label:set_text(state.online and tr('在线','Online') or tr('离线','Offline'));connection_label:align('right_mid',0,0) end
@@ -307,7 +306,7 @@ local function refresh_actual()
  local phase_value=scan_start_pending and tr('启动中','Starting') or preparing and tr('准备图表','Preparing charts') or state_name(kind)
  if shown_phase~=phase_value then shown_phase=phase_value;phase:set_text(phase_value);phase:align('top_mid',0,285) end
  action:show(not running and finished and (not preparing or chart_prepare_failed))
- radar:set_sweeping(running or preparing or scan_start_pending)
+ radar:set_sweeping((running or preparing or scan_start_pending) and not scan_visual_wait)
  local fraction=math.max(0,math.min(100,total or 0))/100
  local selected=state.selected or 0
  local captured=state.capture_percent and state.capture_percent/100 or selected>0 and math.min(1,(state.captured or 0)/selected) or 0
@@ -572,7 +571,8 @@ end
 local function run()
  startup_stage('before_init');lvgl.init({hold_first_frame=true,unveil_input=true});owned=true;if lvgl.chart_clear then lvgl.chart_clear() end
  screen=lvgl.create_screen();screen:set_style({bg_color=cfg.dark and '#000000' or '#e1e1e6',bg_opa=255,pad=0});screen:clear_flag('SCROLLABLE')
- assert(not active(),'Previous Unveil request is finishing; retry shortly')
+ -- A previous request may still be unwinding. Session generations reject its
+ -- messages; keep the new UI responsive while the exclusive worker finishes.
  while thread.sync.queue_recv(queue,0) do end
  if thread.sync.queue_delete then thread.sync.queue_delete(queue) end
  local created,queue_error=thread.sync.queue_create(queue,{depth=4,item_size=2048});assert(created or queue_error=='exists',queue_error)
@@ -581,7 +581,7 @@ local function run()
  F={volume=load(36,true),tabs=load(24,true),axis=load(12),status=load(18),dialLabel=load(16),micro=load(14),metric=load(18,true),dial=lvgl.font_load('apps/unveil/assets/Doto-Metrics.ttf',{size=44,cache_size=64}),title=load(36),body=load(28),small=load(24),brand=load(28,true),words=load(72,true),digits=load(96,true)}
  startup_stage('fonts_ready');lvgl.set_default_font(nil);screen:clear_flag('SCROLLABLE')
  local w,h=screen:get_size();assert(w==480 and h==480,'Unveil requires Mosaico 480 x 480')
- render();screen:load();if lvgl.present_ready then local p=lvgl.render_stats and lvgl.render_stats(false);print('Unveil bootstrap early_frames='..tostring(p and p.frames));lvgl.present_ready() end;startup_stage('ui_ready');WiFi.prepare();if lvgl.sound then pcall(lvgl.sound,'settings',cfg.sound_volume,cfg.sound_muted) end;start()
+ render();screen:load();if lvgl.present_ready then local p=lvgl.render_stats and lvgl.render_stats(false);print('Unveil bootstrap early_frames='..tostring(p and p.frames));lvgl.present_ready() end;startup_stage('ui_ready');if lvgl.sound then pcall(lvgl.sound,'settings',cfg.sound_volume,cfg.sound_muted) end;start()
  local next_poll=system.millis()+1500
  if lvgl.set_gesture_options then lvgl.set_gesture_options({scroll_limit=28,scroll_throw=12}) end
  local next_frame=system.millis()
@@ -639,11 +639,12 @@ local function run()
   local now=system.millis()
   if lvgl.scan_key and lvgl.scan_key() then
    if settings_controller then settings_controller:flush(now,true) end
+   scan_visual_wait=true;if radar then radar:set_sweeping(false) end
    sub=nil;page=1;paging=false;dirty=true;render()
    if primary_pager.pager_home then primary_pager:pager_home() else primary_pager:set_tile_by_index(1,1,false) end
    select_indicator(1,true)
    if radar and radar.resume then radar:resume() end
-   local started=request_scan();if started then render() else refresh() end
+   local started=request_scan();if not started and not start_feedback then start_feedback=ScanGate.new(false) end;if started then render() else refresh() end
    print('Unveil top-key home scan='..tostring(started)..' running='..tostring(state.running))
    if started then next_poll=now+500 end
   end
@@ -652,16 +653,25 @@ local function run()
    local ok,info=thread.get('unveil_chart');local status=ok and info:match('status=(%w+)');if status~='running' and status~='queued' then chart_retry_at=now+5000;request_chart(nil,nil,state.job) end
   end
   if start_feedback then
-   if page~=1 or sub or paging then
-    start_feedback=nil;haptics:cancel_start()
+   if page~=1 or sub then
+    start_feedback=nil;scan_visual_wait=false;haptics:cancel_start()
    else
+    local settled=not paging and (not primary_pager.pager_home_settled or primary_pager:pager_home_settled())
     local p=lvgl.present_status();local f=start_feedback
-    if p.ok and p.generation==f.generation then
-     if not f.frame and p.sequence>f.sequence then f.frame=p.submitted end
-     if f.frame and p.transferred>=f.frame and p.presented>=f.frame then
-      print('Unveil home presented frame='..f.frame..' transfer='..p.transferred..' sequence='..p.sequence)
-      start_feedback=nil;haptics:start_presented()
+    local action=ScanGate.step(f,settled,p)
+    if action=='paint' then
+     -- Fence a static home frame after all pager movement has stopped.
+     primary_pager:invalidate()
+     print('Unveil home settled; static frame requested')
+    elseif action=='start' then
+     print('Unveil home presented frame='..f.frame..' transfer='..p.transferred..' sequence='..p.sequence)
+     start_feedback=nil;scan_visual_wait=false;last_signature=nil
+     local function release()
+      refresh()
+      print('Unveil scan animation enabled at='..system.millis())
+      if f.haptic then haptics:start_presented() end
      end
+     if lvgl.batch then lvgl.batch(release) else release() end
     end
    end
   end
@@ -682,7 +692,7 @@ local function run()
    next_command_check=now+200
    if not active() then pending=false;start(queued_command);next_poll=now+2500 end
   end
-  if now>=next_poll then
+  if now>=next_poll and (not sub or state.running) then
    next_poll=now+(state.running and 500 or 5000)
    if not active() then
     if pending then pending=false end
@@ -709,6 +719,6 @@ local function run()
 end
 local success,err=xpcall(run,debug.traceback)
 if not success then pcall(storage.write_file,app..'/last-error.txt',tostring(err)) end
-pcall(thread.stop,job,0)
+pcall(thread.stop,job,1)
 if owned then pcall(lvgl.deinit) end
 if not success then error(err) end

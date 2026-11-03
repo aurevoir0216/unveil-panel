@@ -30,6 +30,8 @@
 static const luaL_Reg lua_lvgl_base_methods[] = {
     {"pager_motion",lua_lvgl_pager_motion},
     {"pager_home",lua_lvgl_pager_home},
+    {"pager_home_settled",lua_lvgl_pager_home_settled},
+    {"invalidate",lua_lvgl_invalidate},
     {"dial_init",lua_lvgl_dial_init},
     {"dial_values",lua_lvgl_dial_values},
     {"radial_input",lua_lvgl_radial_input},

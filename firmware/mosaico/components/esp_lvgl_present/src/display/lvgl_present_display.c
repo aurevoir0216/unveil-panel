@@ -642,7 +642,10 @@ bool unveil_release_boot_frame(lv_display_t *disp)
     esp_lv_adapter_display_node_t *node=lv_display_get_user_data(disp);
     if (!node) return false;
     node->boot_pending=false;
-    node->damage[0]=node->full_area;node->damage_count=1;node->coverage_count=0;
+    /* No refresh ran while boot_pending, so full_area is not initialized yet.
+     * Let invalidation build one correctly aligned full-screen damage area. */
+    node->full_area=(lvgl_present_area_t){0,0,node->caps.width-1,node->caps.height-1};
+    node->damage_count=0;node->coverage_count=0;
     lv_obj_invalidate(lv_display_get_screen_active(disp));
     lv_timer_resume(lv_display_get_refr_timer(disp));
     ESP_LOGI(TAG,"Unveil first hardware frame released; suppressed=%u",(unsigned)node->boot_suppressed_frames);

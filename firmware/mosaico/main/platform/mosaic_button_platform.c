@@ -53,6 +53,7 @@ static void back_button_down_cb(void *button_handle, void *user_data)
      * eventual release into a Home -> Lock transition. */
     s_back_button_ready = true;
     s_unveil_press_handled = unveil_scan_key_is_active();
+    ESP_LOGI(TAG,"top-key owner=%s",s_unveil_press_handled?"Unveil":"Mosaico");
 
 }
 
@@ -67,6 +68,7 @@ static void back_button_cb(void *button_handle, void *user_data)
     }
 
     if (s_unveil_press_handled) {s_unveil_press_handled=false;if(unveil_scan_key_is_active())unveil_scan_key_press();return;}
+    ESP_LOGI(TAG,"top-key dispatch=Mosaico Back");
     esp_err_t err = mosaic_ui_back();
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "queue top-key Back failed: %s", esp_err_to_name(err));

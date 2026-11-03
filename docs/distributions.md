@@ -10,7 +10,7 @@ Its own bootloader and Flash layout replace the original retained Mosaico prefix
 
 ## Desktop
 
-Mosaico starts normally. A round desktop icon starts Unveil through the app lifecycle. A primary-page upward swipe can return to the shell; upward swipes on secondary pages stay inside Unveil. Short top-button scan dispatch is active only while Unveil owns the key.
+Mosaico starts normally. A round desktop icon starts Unveil through the app lifecycle. A primary-page upward swipe can return to the shell; upward swipes on secondary pages stay inside Unveil. Short top-button scan dispatch is active only while Unveil owns the display; outside Unveil the original Mosaico button behavior applies. The Unveil Wi-Fi row is connection status only; use Mosaico System Settings for configuration. An app-owned orange pixel loading screen appears immediately on launch.
 
 The app uses the paired firmware's native LVGL extensions. It is not a Works download advertised as compatible with an unmodified factory image. A separate Works package was explicitly cancelled.
 
@@ -20,6 +20,10 @@ The independent UI/runtime core adds the official ESP-Iris normal-app integratio
 
 It boots as the selected native app, rather than inside Mosaico-Claw. System -> Ideas requests return to Vibe Mode. Official store publication and a six-digit number are separate steps, not implied by creating a local bundle.
 
+## Top-button scan timing
+
+All three variants pause the sweep while returning to the radar page. After scrolling stops, an explicitly invalidated static home frame must be submitted, transferred and presented. Only then are the sweep and start haptic released in the same UI batch. Capture requests and backend progress are not delayed or substituted. Leaving home cancels pending visual feedback.
+
 ## Acceptance boundary
 
-Builds, dependency separation, partition fit, privacy checks and bundle inspection are recorded with prepared artifacts. This task does not change the installed device. Newly split boot, touch, shell handoff, Wi-Fi, sound, vibration and performance still require physical acceptance. Old tests on the dedicated framework build do not constitute acceptance of these new startup paths.
+Builds, dependency separation, partition fit, privacy checks and bundle inspection are recorded with prepared artifacts. Desktop local UI and display handoff have been exercised on hardware, and an earlier Idea memory fix passed startup. The latest independent/Idea paths and backend-dependent completion flow still require physical acceptance. Old tests on the dedicated framework build do not constitute acceptance of these new startup paths.

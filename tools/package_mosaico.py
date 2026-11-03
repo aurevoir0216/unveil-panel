@@ -79,7 +79,7 @@ def main():
     shutil.copy2(args.desktop_bundle, desktop / 'unveil-desktop.irisfw')
     shutil.copytree(repo / 'firmware/mosaico/app', desktop / 'app')
     required_assets = {'Doto-Regular.ttf', 'Doto-Metrics.ttf', 'Unveil-Text-Readable.ttf',
-                       'Unveil-Wifi.ttf', 'Doto-OFL.txt', 'Noto-OFL.txt', 'icon.jpg'}
+                       'Doto-OFL.txt', 'Noto-OFL.txt', 'icon.jpg'}
     for asset in (desktop / 'app/assets').iterdir():
         if asset.is_file() and asset.name not in required_assets:
             asset.unlink()

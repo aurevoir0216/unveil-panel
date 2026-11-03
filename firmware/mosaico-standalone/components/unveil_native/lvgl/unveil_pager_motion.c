@@ -31,5 +31,5 @@ void unveil_pager_motion_home(lv_obj_t *obj)
     lv_obj_stop_scroll_anim(obj);
     lv_indev_t *indev=NULL;
     while((indev=lv_indev_get_next(indev)))if(lv_indev_get_type(indev)==LV_INDEV_TYPE_POINTER&&lv_indev_get_display(indev)==lv_obj_get_display(obj)&&lv_indev_get_state(indev)==LV_INDEV_STATE_PRESSED)lv_indev_wait_release(indev);
-    lv_tileview_set_tile_by_index(obj,0,0,LV_ANIM_OFF);
+    lv_tileview_set_tile_by_index(obj,0,0,LV_ANIM_ON);
 }

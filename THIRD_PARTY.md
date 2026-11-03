@@ -7,3 +7,5 @@
 - Idea adds official ESP-Iris and retained Vibe Mode integration from the pinned esp-mosaico-utils submodule; those system dependencies belong to Idea only.
 - LVGL, Lua, littlefs, ESP-IDF, TinyUSB, codec and sensor libraries retain their upstream licenses.
 - Doto/Noto licenses are next to the font resources, including derived subsets.
+
+- Unveil-Wifi.otf is derived from the existing OFL Wi-Fi font: matching Unicode coverage and advance widths, cubic outlines fitted within one original font unit and CFF subroutine compression. Reproduce with tools/compact_wifi_font.py (fontTools and cffsubr). A 24px raster sample check is recorded with hardware validation.

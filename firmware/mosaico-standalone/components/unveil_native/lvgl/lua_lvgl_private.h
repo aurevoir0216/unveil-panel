@@ -504,6 +504,8 @@ int lua_lvgl_image_set_chart(lua_State *L);
 int lua_lvgl_label_center_ink(lua_State *L);
 
 int lua_lvgl_pager_home(lua_State *L);
+int lua_lvgl_pager_home_settled(lua_State *L);
+int lua_lvgl_invalidate(lua_State *L);
 int lua_lvgl_ui_tree(lua_State *L);
 int lua_lvgl_scan_key(lua_State *L);
 int lua_lvgl_pager_motion(lua_State *L);

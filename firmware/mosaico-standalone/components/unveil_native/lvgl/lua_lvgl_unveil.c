@@ -556,3 +556,19 @@ int lua_lvgl_pager_home(lua_State *L)
     lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_TILEVIEW);
     unveil_pager_motion_home(obj);lua_lvgl_unlock();return 0;
 }
+
+int lua_lvgl_pager_home_settled(lua_State *L)
+{
+ lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
+ lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_TILEVIEW);
+ bool ready=!lv_obj_is_scrolling(obj)&&lv_obj_get_scroll_x(obj)==0&&lv_obj_get_scroll_y(obj)==0;
+ lua_lvgl_unlock();lua_pushboolean(L,ready);return 1;
+}
+int lua_lvgl_invalidate(lua_State *L)
+{
+ lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
+ esp_err_t error=lua_lvgl_lock();if(error!=ESP_OK)return lua_lvgl_error_esp(L,"invalidate lock",error);
+ const char *reason=NULL;lv_obj_t *obj=lua_lvgl_validate_ud_locked(ud,NULL,&reason);
+ if(!obj){lua_lvgl_unlock();return luaL_error(L,"%s",reason?reason:"invalid object");}
+ lv_obj_invalidate(obj);lua_lvgl_unlock();return 0;
+}

@@ -12,7 +12,7 @@
 static const char *TAG = "lua_lvgl_font";
 static uint8_t *s_prepared_font;
 static size_t s_prepared_size;
-static uint32_t s_prepared_generation;
+static uint32_t s_prepared_generation,s_prepare_ticket;
 static char s_prepared_path[LUA_MODULE_LVGL_PATH_MAX];
 static void prepared_font_clear(void) {free(s_prepared_font);s_prepared_font=NULL;s_prepared_size=0;s_prepared_path[0]=0;}
 
@@ -443,17 +443,22 @@ static void lua_lvgl_refresh_default_font_screens_locked(void)
 /* The worker reads NAND without holding the display lock. Ownership transfers to font_load. */
 static int lua_lvgl_font_prepare(lua_State *L)
 {
+    if(lua_isboolean(L,1)&&!lua_toboolean(L,1)){
+        esp_err_t error=lua_lvgl_lock();if(error!=ESP_OK)return lua_lvgl_error_esp(L,"font cancel lock",error);
+        ++s_prepare_ticket;prepared_font_clear();lua_lvgl_unlock();lua_pushboolean(L,true);return 1;
+    }
     const char *path=luaL_checkstring(L,1);char *normalized=lua_newuserdata(L,LUA_MODULE_LVGL_PATH_MAX);
     esp_err_t err=lua_lvgl_lock();if(err!=ESP_OK)return lua_lvgl_error_esp(L,"font prepare lock",err);
     if(!s_lvgl.runtime_initialized){lua_lvgl_unlock();return luaL_error(L,"LVGL owner is not initialized");}
     err=lua_lvgl_normalize_font_path(path,normalized,LUA_MODULE_LVGL_PATH_MAX);uint32_t generation=s_lvgl.generation;
     if(err!=ESP_OK){lua_lvgl_unlock();return lua_lvgl_error_esp(L,"font prepare path",err);}
     bool ready=s_prepared_font&&s_prepared_generation==generation&&!strcmp(normalized,s_prepared_path);
+    uint32_t ticket=ready?s_prepare_ticket:++s_prepare_ticket;
     lua_lvgl_unlock();if(ready){lua_pushboolean(L,true);return 1;}
     uint8_t *bytes=NULL;size_t size=0;err=lua_lvgl_read_font_data(normalized,&bytes,&size);
     if(err!=ESP_OK)return lua_lvgl_error_esp(L,"font background read",err);
     err=lua_lvgl_lock();if(err!=ESP_OK){free(bytes);return lua_lvgl_error_esp(L,"font publish lock",err);}
-    ready=s_lvgl.runtime_initialized&&generation==s_lvgl.generation;
+    ready=s_lvgl.runtime_initialized&&generation==s_lvgl.generation&&ticket==s_prepare_ticket;
     if(ready){prepared_font_clear();s_prepared_font=bytes;s_prepared_size=size;s_prepared_generation=generation;strlcpy(s_prepared_path,normalized,sizeof(s_prepared_path));bytes=NULL;}
     lua_lvgl_unlock();free(bytes);lua_pushboolean(L,ready);return 1;
 }

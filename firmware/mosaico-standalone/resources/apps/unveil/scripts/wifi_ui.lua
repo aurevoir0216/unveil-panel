@@ -1,9 +1,9 @@
--- Wi-Fi view over the selected platform backend; the independent runtime owns its Wi-Fi state.
+-- Reuses the device's Mosaico Wi-Fi manager and configuration store.
 local lvgl,json,system=require('lvgl'),require('json'),require('system')
 local M={}
 local thread=require('thread')
 local scripts=assert(debug.getinfo(1,'S').source:match('^@(.*)/[^/]+$'))
-local font_path='apps/unveil/assets/Unveil-Wifi.ttf'
+local font_path='apps/unveil/assets/Unveil-Wifi.otf'
 local shared_font,next_prepare=nil,0
 function M.prepare()
  if shared_font or not lvgl.font_prepare or system.millis()<next_prepare then return end
@@ -15,7 +15,7 @@ end
 local function acquire_font()
  if not shared_font and lvgl.font_ready and lvgl.font_ready(font_path) then
   local ok,font=pcall(lvgl.font_load,font_path,{size=24,cache_size=128,prepared=true})
-  if ok then shared_font=font end
+  if ok then shared_font=font;print('Unveil Wi-Fi font active='..tostring(font:is_valid())) end
  end
  return shared_font
 end
@@ -139,6 +139,8 @@ function M.new(parent,F,C,tr)
  end
  function self:close()
   self.font=nil
+  if shared_font then pcall(function() shared_font:delete() end);shared_font=nil end
+  if lvgl.font_prepare then pcall(lvgl.font_prepare,false) end
  end
  self:call('status');render_list();self:tick(system.millis())
  return self

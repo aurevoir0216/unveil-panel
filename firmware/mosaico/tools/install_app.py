@@ -40,9 +40,11 @@ def main():
     for suffix in ('', '/scripts', '/assets'):
         request('/api/files/mkdir', {'path': '/apps/unveil' + suffix, 'recursive': True}, True)
     files = {}
+    runtime_assets = {'Doto-Regular.ttf', 'Doto-Metrics.ttf', 'Unveil-Text-Readable.ttf',
+                      'Doto-OFL.txt', 'Noto-OFL.txt', 'icon.jpg'}
     for folder in ('scripts', 'assets'):
         for path in (app / folder).rglob('*'):
-            if path.is_file():
+            if path.is_file() and (folder != 'assets' or path.name in runtime_assets):
                 files[path.relative_to(app).as_posix()] = path.read_bytes()
     if not existing_config:
         files['config.json'] = (app / 'config.example.json').read_bytes()

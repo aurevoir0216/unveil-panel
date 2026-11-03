@@ -155,7 +155,7 @@ index a4b8ea37..a2f8ad61 100644
      {"value_changed", LV_EVENT_VALUE_CHANGED},
      {"focused",       LV_EVENT_FOCUSED},
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_font.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_font.c
-index d08669ea..0b967e50 100644
+index d08669ea..edb18de4 100644
 --- a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_font.c
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_font.c
 @@ -10,6 +10,12 @@
@@ -164,7 +164,7 @@ index d08669ea..0b967e50 100644
  static const char *TAG = "lua_lvgl_font";
 +static uint8_t *s_prepared_font;
 +static size_t s_prepared_size;
-+static uint32_t s_prepared_generation;
++static uint32_t s_prepared_generation,s_prepare_ticket;
 +static char s_prepared_path[LUA_MODULE_LVGL_PATH_MAX];
 +static void prepared_font_clear(void) {free(s_prepared_font);s_prepared_font=NULL;s_prepared_size=0;s_prepared_path[0]=0;}
 +
@@ -179,24 +179,29 @@ index d08669ea..0b967e50 100644
      lua_lvgl_font_record_t **cursor = &s_lvgl.fonts;
  
      while (*cursor) {
-@@ -433,6 +440,30 @@ static void lua_lvgl_refresh_default_font_screens_locked(void)
+@@ -433,6 +440,35 @@ static void lua_lvgl_refresh_default_font_screens_locked(void)
      }
  }
  
 +/* The worker reads NAND without holding the display lock. Ownership transfers to font_load. */
 +static int lua_lvgl_font_prepare(lua_State *L)
 +{
++    if(lua_isboolean(L,1)&&!lua_toboolean(L,1)){
++        esp_err_t error=lua_lvgl_lock();if(error!=ESP_OK)return lua_lvgl_error_esp(L,"font cancel lock",error);
++        ++s_prepare_ticket;prepared_font_clear();lua_lvgl_unlock();lua_pushboolean(L,true);return 1;
++    }
 +    const char *path=luaL_checkstring(L,1);char *normalized=lua_newuserdata(L,LUA_MODULE_LVGL_PATH_MAX);
 +    esp_err_t err=lua_lvgl_lock();if(err!=ESP_OK)return lua_lvgl_error_esp(L,"font prepare lock",err);
 +    if(!s_lvgl.runtime_initialized){lua_lvgl_unlock();return luaL_error(L,"LVGL owner is not initialized");}
 +    err=lua_lvgl_normalize_font_path(path,normalized,LUA_MODULE_LVGL_PATH_MAX);uint32_t generation=s_lvgl.generation;
 +    if(err!=ESP_OK){lua_lvgl_unlock();return lua_lvgl_error_esp(L,"font prepare path",err);}
 +    bool ready=s_prepared_font&&s_prepared_generation==generation&&!strcmp(normalized,s_prepared_path);
++    uint32_t ticket=ready?s_prepare_ticket:++s_prepare_ticket;
 +    lua_lvgl_unlock();if(ready){lua_pushboolean(L,true);return 1;}
 +    uint8_t *bytes=NULL;size_t size=0;err=lua_lvgl_read_font_data(normalized,&bytes,&size);
 +    if(err!=ESP_OK)return lua_lvgl_error_esp(L,"font background read",err);
 +    err=lua_lvgl_lock();if(err!=ESP_OK){free(bytes);return lua_lvgl_error_esp(L,"font publish lock",err);}
-+    ready=s_lvgl.runtime_initialized&&generation==s_lvgl.generation;
++    ready=s_lvgl.runtime_initialized&&generation==s_lvgl.generation&&ticket==s_prepare_ticket;
 +    if(ready){prepared_font_clear();s_prepared_font=bytes;s_prepared_size=size;s_prepared_generation=generation;strlcpy(s_prepared_path,normalized,sizeof(s_prepared_path));bytes=NULL;}
 +    lua_lvgl_unlock();free(bytes);lua_pushboolean(L,ready);return 1;
 +}
@@ -210,7 +215,7 @@ index d08669ea..0b967e50 100644
  static int lua_lvgl_font_load(lua_State *L)
  {
      const char *path = LUA_MODULE_LVGL_DEFAULT_FONT_PATH;
-@@ -480,7 +511,11 @@ static int lua_lvgl_font_load(lua_State *L)
+@@ -480,7 +516,11 @@ static int lua_lvgl_font_load(lua_State *L)
          }
          return lua_lvgl_error_esp(L, "font path", err);
      }
@@ -223,7 +228,7 @@ index d08669ea..0b967e50 100644
      if (err != ESP_OK) {
          lua_lvgl_unlock();
          return luaL_error(L, "failed to read font: %s (%s)", normalized_path, esp_err_to_name(err));
-@@ -498,6 +533,7 @@ static int lua_lvgl_font_load(lua_State *L)
+@@ -498,6 +538,7 @@ static int lua_lvgl_font_load(lua_State *L)
          lua_lvgl_unlock();
          return luaL_error(L, "lvgl font record allocation failed");
      }
@@ -231,7 +236,7 @@ index d08669ea..0b967e50 100644
      record->font = font;
      record->font_data = font_data;
      record->generation = s_lvgl.generation;
-@@ -659,6 +695,8 @@ void lua_lvgl_register_font_metatable(lua_State *L)
+@@ -659,6 +700,8 @@ void lua_lvgl_register_font_metatable(lua_State *L)
  }
  
  const luaL_Reg lua_lvgl_font_module_funcs[] = {
@@ -292,15 +297,17 @@ index 23cb2d40..846fe7c5 100644
      if (record->data2) lv_image_cache_drop(record->data2);
      free(record->data);
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_methods.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_methods.c
-index a34da5b7..36e78212 100644
+index a34da5b7..94534a08 100644
 --- a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_methods.c
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_methods.c
-@@ -28,6 +28,12 @@
+@@ -28,6 +28,14 @@
  #include "lua_lvgl_private.h"
  
  static const luaL_Reg lua_lvgl_base_methods[] = {
 +    {"pager_motion",lua_lvgl_pager_motion},
 +    {"pager_home",lua_lvgl_pager_home},
++    {"pager_home_settled",lua_lvgl_pager_home_settled},
++    {"invalidate",lua_lvgl_invalidate},
 +    {"dial_init",lua_lvgl_dial_init},
 +    {"dial_values",lua_lvgl_dial_values},
 +    {"radial_input",lua_lvgl_radial_input},
@@ -308,7 +315,7 @@ index a34da5b7..36e78212 100644
      {"set_pos", lua_lvgl_set_pos},
      {"get_pos", lua_lvgl_get_pos},
      {"set_size", lua_lvgl_set_size},
-@@ -39,6 +45,7 @@ static const luaL_Reg lua_lvgl_base_methods[] = {
+@@ -39,6 +47,7 @@ static const luaL_Reg lua_lvgl_base_methods[] = {
      {"set_grid", lua_lvgl_set_grid},
      {"set_grid_cell", lua_lvgl_set_grid_cell},
      {"set_scroll", lua_lvgl_set_scroll},
@@ -316,7 +323,7 @@ index a34da5b7..36e78212 100644
      {"add_flag", lua_lvgl_add_flag},
      {"clear_flag", lua_lvgl_clear_flag},
      {"move_foreground", lua_lvgl_move_foreground},
-@@ -55,6 +62,8 @@ static const luaL_Reg lua_lvgl_screen_methods[] = {
+@@ -55,6 +64,8 @@ static const luaL_Reg lua_lvgl_screen_methods[] = {
  };
  
  static const luaL_Reg lua_lvgl_label_methods[] = {
@@ -325,7 +332,7 @@ index a34da5b7..36e78212 100644
      {"set_text", lua_lvgl_set_text},
      {NULL, NULL},
  };
-@@ -72,6 +81,7 @@ static const luaL_Reg lua_lvgl_bar_methods[] = {
+@@ -72,6 +83,7 @@ static const luaL_Reg lua_lvgl_bar_methods[] = {
  };
  
  static const luaL_Reg lua_lvgl_slider_methods[] = {
@@ -333,7 +340,7 @@ index a34da5b7..36e78212 100644
      {"set_value", lua_lvgl_set_value},
      {"get_value", lua_lvgl_get_value},
      {"set_range", lua_lvgl_set_range},
-@@ -79,6 +89,8 @@ static const luaL_Reg lua_lvgl_slider_methods[] = {
+@@ -79,6 +91,8 @@ static const luaL_Reg lua_lvgl_slider_methods[] = {
  };
  
  static const luaL_Reg lua_lvgl_arc_methods[] = {
@@ -342,7 +349,7 @@ index a34da5b7..36e78212 100644
      {"set_value", lua_lvgl_set_value},
      {"get_value", lua_lvgl_get_value},
      {"set_range", lua_lvgl_set_range},
-@@ -118,7 +130,13 @@ static const luaL_Reg lua_lvgl_roller_methods[] = {
+@@ -118,7 +132,13 @@ static const luaL_Reg lua_lvgl_roller_methods[] = {
      {NULL, NULL},
  };
  
@@ -356,7 +363,7 @@ index a34da5b7..36e78212 100644
      {"set_text", lua_lvgl_set_text},
      {NULL, NULL},
  };
-@@ -284,6 +302,8 @@ static const luaL_Reg lua_lvgl_eaf_methods[] = {
+@@ -284,6 +304,8 @@ static const luaL_Reg lua_lvgl_eaf_methods[] = {
  };
  
  static const luaL_Reg lua_lvgl_image_methods[] = {
@@ -365,7 +372,7 @@ index a34da5b7..36e78212 100644
      {"set_raw_rgb565", lua_lvgl_image_set_raw_rgb565},
      {"set_raw_argb8888", lua_lvgl_image_set_raw_argb8888},
      {"set_rotation", lua_lvgl_image_set_rotation},
-@@ -325,7 +345,7 @@ static const lua_lvgl_widget_descriptor_t s_widget_descriptors[] = {
+@@ -325,7 +347,7 @@ static const lua_lvgl_widget_descriptor_t s_widget_descriptors[] = {
      {LUA_LVGL_OBJ_SWITCH,      "lvgl.obj.switch",      lua_lvgl_switch_methods},
      {LUA_LVGL_OBJ_DROPDOWN,    "lvgl.obj.dropdown",    lua_lvgl_dropdown_methods},
      {LUA_LVGL_OBJ_ROLLER,      "lvgl.obj.roller",      lua_lvgl_roller_methods},
@@ -388,7 +395,7 @@ index a481548a..f3314995 100644
      record->data = NULL;
      record->data_size = 0;
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_private.h b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_private.h
-index dba2698b..9fc86e44 100644
+index dba2698b..f22fef15 100644
 --- a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_private.h
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_private.h
 @@ -163,6 +163,7 @@ typedef struct lua_lvgl_obj_record {
@@ -399,7 +406,7 @@ index dba2698b..9fc86e44 100644
      size_t data_size;
      size_t data2_size;
      int data_width;
-@@ -472,3 +473,43 @@ extern const luaL_Reg lua_lvgl_complex_widget_funcs[];
+@@ -472,3 +473,45 @@ extern const luaL_Reg lua_lvgl_complex_widget_funcs[];
  extern const luaL_Reg lua_lvgl_eaf_module_funcs[];
  extern const luaL_Reg lua_lvgl_event_module_funcs[];
  extern const luaL_Reg lua_lvgl_demo_module_funcs[];
@@ -434,6 +441,8 @@ index dba2698b..9fc86e44 100644
 +int lua_lvgl_label_center_ink(lua_State *L);
 +
 +int lua_lvgl_pager_home(lua_State *L);
++int lua_lvgl_pager_home_settled(lua_State *L);
++int lua_lvgl_invalidate(lua_State *L);
 +int lua_lvgl_ui_tree(lua_State *L);
 +int lua_lvgl_scan_key(lua_State *L);
 +int lua_lvgl_pager_motion(lua_State *L);
@@ -663,10 +672,10 @@ index 554f8280..f495e40d 100644
      {NULL, NULL},
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c
 new file mode 100644
-index 00000000..fc431dca
+index 00000000..8d4ca058
 --- /dev/null
 +++ b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_unveil.c
-@@ -0,0 +1,562 @@
+@@ -0,0 +1,578 @@
 +#include "lua_lvgl_private.h"
 +#include <stdatomic.h>
 +#include "src/misc/cache/instance/lv_image_cache.h"
@@ -1187,7 +1196,7 @@ index 00000000..fc431dca
 +static atomic_bool unveil_scan_key_pending;
 +static atomic_bool unveil_scan_key_enabled;
 +void unveil_scan_key_enable(void) {atomic_store(&unveil_scan_key_enabled,true);}
-+bool unveil_scan_key_is_active(void) {return atomic_load(&unveil_scan_key_enabled);}
++bool unveil_scan_key_is_active(void) {return atomic_load(&unveil_scan_key_enabled)&&display_service_has_exclusive_session();}
 +void unveil_scan_key_disable(void) {atomic_store(&unveil_scan_key_enabled,false);atomic_store(&unveil_scan_key_pending,false);}
 +void unveil_scan_key_press(void) {atomic_store(&unveil_scan_key_pending,true);}
 +int lua_lvgl_scan_key(lua_State *L)
@@ -1228,6 +1237,22 @@ index 00000000..fc431dca
 +{
 +    lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_TILEVIEW);
 +    unveil_pager_motion_home(obj);lua_lvgl_unlock();return 0;
++}
++
++int lua_lvgl_pager_home_settled(lua_State *L)
++{
++ lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
++ lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_TILEVIEW);
++ bool ready=!lv_obj_is_scrolling(obj)&&lv_obj_get_scroll_x(obj)==0&&lv_obj_get_scroll_y(obj)==0;
++ lua_lvgl_unlock();lua_pushboolean(L,ready);return 1;
++}
++int lua_lvgl_invalidate(lua_State *L)
++{
++ lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
++ esp_err_t error=lua_lvgl_lock();if(error!=ESP_OK)return lua_lvgl_error_esp(L,"invalidate lock",error);
++ const char *reason=NULL;lv_obj_t *obj=lua_lvgl_validate_ud_locked(ud,NULL,&reason);
++ if(!obj){lua_lvgl_unlock();return luaL_error(L,"%s",reason?reason:"invalid object");}
++ lv_obj_invalidate(obj);lua_lvgl_unlock();return 0;
 +}
 diff --git a/components/lua_modules/lua_module_lvgl/src/lua_lvgl_value.c b/components/lua_modules/lua_module_lvgl/src/lua_lvgl_value.c
 index a073fb39..b9276f52 100644
@@ -1539,7 +1564,7 @@ index 00000000..0354a8af
 +}
 diff --git a/components/lua_modules/lua_module_lvgl/src/unveil_pager_motion.c b/components/lua_modules/lua_module_lvgl/src/unveil_pager_motion.c
 new file mode 100644
-index 00000000..8c6dc34c
+index 00000000..1f175357
 --- /dev/null
 +++ b/components/lua_modules/lua_module_lvgl/src/unveil_pager_motion.c
 @@ -0,0 +1,35 @@
@@ -1576,7 +1601,7 @@ index 00000000..8c6dc34c
 +    lv_obj_stop_scroll_anim(obj);
 +    lv_indev_t *indev=NULL;
 +    while((indev=lv_indev_get_next(indev)))if(lv_indev_get_type(indev)==LV_INDEV_TYPE_POINTER&&lv_indev_get_display(indev)==lv_obj_get_display(obj)&&lv_indev_get_state(indev)==LV_INDEV_STATE_PRESSED)lv_indev_wait_release(indev);
-+    lv_tileview_set_tile_by_index(obj,0,0,LV_ANIM_OFF);
++    lv_tileview_set_tile_by_index(obj,0,0,LV_ANIM_ON);
 +}
 diff --git a/components/lua_modules/lua_module_lvgl/src/unveil_pager_motion.h b/components/lua_modules/lua_module_lvgl/src/unveil_pager_motion.h
 new file mode 100644

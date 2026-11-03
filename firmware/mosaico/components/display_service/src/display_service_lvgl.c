@@ -309,6 +309,10 @@ static esp_err_t display_service_lvgl_present_activate(
     esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();
     adapter_config.task_priority = DISPLAY_SERVICE_TASK_PRIO;
     adapter_config.task_stack_size = DISPLAY_SERVICE_TASK_STACK;
+#if CONFIG_SPIRAM
+    /* Keep the original desktop resident without consuming its internal RAM. */
+    adapter_config.stack_in_psram = true;
+#endif
 #if CONFIG_FREERTOS_NUMBER_OF_CORES > 1
     adapter_config.task_core_id = 1;
 #else

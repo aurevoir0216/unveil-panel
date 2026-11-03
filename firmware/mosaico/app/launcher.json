@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "unveil",
-  "entry": "scripts/unveil.lua",
+  "entry": "scripts/launch.lua",
   "display_name": "Unveil",
   "args": {},
   "order": 30,
