@@ -447,7 +447,7 @@ int lua_lvgl_label_center_ink(lua_State *L)
  lv_obj_t *parent=lv_obj_get_parent(obj);float cx=lv_obj_get_content_width(parent)*.5f,cy=lv_obj_get_content_height(parent)*.5f;
  lua_lvgl_unlock();lua_pushnumber(L,cx+(maxx>=minx ? (maxx-minx)*.5f : w*.5f));lua_pushnumber(L,cy+(maxy>=miny ? (maxy-miny)*.5f : h*.5f));return 2;
 }
-/* LVGL vector widget bindings. The widget owns geometry, not image memory. */
+/* LVGL vector widget bindings. */
 int lua_lvgl_dial_init(lua_State *L)
 {
     lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_GENERIC);
@@ -461,12 +461,29 @@ int lua_lvgl_dial_values(lua_State *L)
     lua_lvgl_unlock();if(!ok)return luaL_error(L,"invalid vector dial indices");lua_pushinteger(L,elapsed);return 1;
 }
 
+int lua_lvgl_dial_motion(lua_State *L)
+{
+    const bool prepare=lua_isnoneornil(L,2);
+    const bool active=lua_toboolean(L,2);
+    lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
+    lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_GENERIC);
+    if(prepare)unveil_dial_vector_prepare_motion(obj);
+    else unveil_dial_vector_paging(obj,active);
+    lua_lvgl_unlock();
+    return 0;
+}
+
 /* One pointer owner, instead of 80 independently scrolling transparent sliders. */
 typedef struct {lv_point_t start;int sector,counts[3],value;float radius;unsigned mode;} uv_radial_t;
 static void uv_radial_emit(lv_obj_t *obj,uv_radial_t *g,const lv_point_t *p)
 {
-    float x=p->x-UV_DIAL_CENTER_X,y=p->y-UV_DIAL_CENTER_Y,r=sqrtf(x*x+y*y);
-    int n=uv_dial_index_from_radius(r,g->counts[g->sector]);
+    const float x = p->x - UV_DIAL_CENTER_X;
+    const float y = p->y - UV_DIAL_CENTER_Y;
+    const float radius = g->mode == 1
+        ? uv_dial_drag_radius(x, y, g->start.x - UV_DIAL_CENTER_X,
+                              g->start.y - UV_DIAL_CENTER_Y, g->radius)
+        : sqrtf(x * x + y * y);
+    int n=uv_dial_index_from_radius(radius,g->counts[g->sector]);
     int v=(g->sector+1)*100+n;if(v!=g->value){g->value=v;lv_obj_send_event(obj,LV_EVENT_VALUE_CHANGED,NULL);}
 }
 static void uv_radial_event(lv_event_t *e)

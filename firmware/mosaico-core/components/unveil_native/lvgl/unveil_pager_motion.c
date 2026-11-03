@@ -14,7 +14,11 @@ static void uv_pager_event(lv_event_t *e)
         lv_indev_t *indev=NULL;while((indev=lv_indev_get_next(indev)))lv_indev_remove_event_cb_with_user_data(indev,uv_pager_press,obj);
     }else{
         lv_anim_t *a=lv_event_get_param(e);
-        if(a){lv_anim_set_duration(a,180);lv_anim_set_path_cb(a,lv_anim_path_ease_out);}
+        if(a){
+            int32_t distance=LV_ABS(a->end_value-a->start_value);
+            lv_anim_set_duration(a,200+40*LV_MIN(distance,480)/480);
+            lv_anim_set_path_cb(a,lv_anim_path_ease_out);
+        }
     }
 }
 

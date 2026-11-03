@@ -96,7 +96,7 @@ local persistence=dofile(scripts..'/persistence.lua').new(scripts..'/persist_wor
 local function save() cfg.mode=cfg.analysis_seconds==0 and 'collect' or 'scan';persistence:set('config.json',json.encode(cfg),40) end
 local last_health
 local function health(v)
- local data=json.encode(v);if data~=last_health then persistence:set('ui-status.json',data,750);last_health=data end
+ local data=json.encode(v);if data~=last_health then pcall(system.publish_status,'ui-status.json',data);last_health=data end
 end
 local function active()
  local good,info=thread.get(job)
@@ -565,7 +565,7 @@ local function render()
  print('Unveil UI page='..page..' sub='..(sub and sub.kind or 'none')..' rebuild='..tostring(rebuilding)..' update_ms='..(system.millis()-started))
 end
 local function startup_stage(phase)
- local i=system.info and system.info() or {};pcall(storage.write_file,app..'/launch-status.json',json.encode({phase=phase,sram_free=i.sram_free,sram_largest=i.sram_largest,psram_free=i.psram_free}))
+ local i=system.info and system.info() or {};pcall(system.publish_status,'launch-status.json',json.encode({phase=phase,sram_free=i.sram_free,sram_largest=i.sram_largest,psram_free=i.psram_free}))
 end
 local function run()
  startup_stage('before_init');lvgl.init({hold_first_frame=true,unveil_input=true});owned=true;if lvgl.chart_clear then lvgl.chart_clear() end

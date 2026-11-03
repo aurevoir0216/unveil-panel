@@ -24,15 +24,15 @@
     "archived_distributions": {
       "desktop": {
         "source": "firmware/mosaico",
-        "status": "frozen",
+        "status": "deprecated",
         "last_release": "v0.1",
-        "new_release_assets": false
+        "release_assets": false
       },
       "full_flash": {
         "source": "firmware/mosaico-standalone",
         "mosaico_framework": false,
         "replaces_flash_layout": true,
-        "status": "frozen",
+        "status": "deprecated",
         "last_release": "v0.21",
         "release_assets": false
       }

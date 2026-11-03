@@ -1,10 +1,10 @@
 -- One bounded network operation. No UI ownership and no endless child task.
 local capability,json,thread=require('capability'),require('json'),require('thread')
 local a=assert(args)
-local storage=require('storage')
+local system=require('system')
 local scripts=assert(debug.getinfo(1,'S').source:match('^@(.*)/[^/]+$'))
 package.path=scripts..'/?.lua;'..package.path
-local function diagnostic(value) pcall(storage.write_file,storage.get_root_dir()..'/apps/unveil/connection-status.json',json.encode(value)) end
+local function diagnostic(value) pcall(system.publish_status,'connection-status.json',json.encode(value)) end
 local policy=require('state')
 local request_config=require('request_config')
 local function request(path,body)

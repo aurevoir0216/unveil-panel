@@ -3,6 +3,7 @@
 #include "esp_iris_service_profiles.h"
 #include "uv_display.h"
 #include "uv_preferences.h"
+#include "uv_runtime.h"
 #include "cJSON.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -75,12 +76,23 @@ static esp_err_t configuration(const esp_iris_rpc_request_t *request,uint8_t *ou
   if(error==ESP_OK)cJSON_AddBoolToObject(reply,"restart_required",true);
  }else if(!strcmp(op,"read")){
   const cJSON *name=cJSON_GetObjectItemCaseSensitive(body,"name");
-  if(cJSON_IsString(name)&&(!strcmp(name->valuestring,"config.json")||!strcmp(name->valuestring,"ui-status.json")||!strcmp(name->valuestring,"launch-status.json"))){
-   char path[96];snprintf(path,sizeof(path),"/data/apps/unveil/%s",name->valuestring);
+  if(cJSON_IsString(name)){
    char *data=heap_caps_malloc(UNVEIL_CONFIG_MAX+1,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
-   error=data?ESP_ERR_NOT_FOUND:ESP_ERR_NO_MEM;
-   FILE *file=data?fopen(path,"rb"):NULL;
-   if(file){size_t n=fread(data,1,UNVEIL_CONFIG_MAX,file);bool oversized=fgetc(file)!=EOF;fclose(file);data[n]=0;cJSON *value=oversized?NULL:cJSON_Parse(data);error=value?ESP_OK:ESP_ERR_INVALID_RESPONSE;if(value)cJSON_AddItemToObject(reply,"data",value);}
+   if(!data)error=ESP_ERR_NO_MEM;
+   else if(!strcmp(name->valuestring,"config.json")){
+    FILE *file=fopen("/data/apps/unveil/config.json","rb");
+    error=ESP_ERR_NOT_FOUND;
+    if(file){
+     size_t n=fread(data,1,UNVEIL_CONFIG_MAX,file);
+     error=fgetc(file)==EOF?ESP_OK:ESP_ERR_INVALID_RESPONSE;
+     fclose(file);data[n]=0;
+    }
+   }else error=uv_status_read(name->valuestring,data,UNVEIL_CONFIG_MAX+1);
+   if(error==ESP_OK){
+    cJSON *value=cJSON_Parse(data);
+    if(value)cJSON_AddItemToObject(reply,"data",value);
+    else error=ESP_ERR_INVALID_RESPONSE;
+   }
    heap_caps_free(data);
   }
  }else if(!strcmp(op,"scan_key")){extern void unveil_scan_key_press(void);unveil_scan_key_press();error=ESP_OK;}

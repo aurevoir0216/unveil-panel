@@ -9,6 +9,7 @@
 #include "lauxlib.h"
 #include "lualib.h"
 #include "cJSON.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
@@ -31,7 +32,61 @@ esp_err_t uv_paths_join(uv_path_root_t root,const char *name,char *out,size_t n)
 esp_err_t uv_paths_get_space(uv_path_root_t root,uint64_t *total,uint64_t *free_bytes){(void)root;size_t capacity,used;esp_err_t e=esp_littlefs_info("unveil",&capacity,&used);if(e==ESP_OK){*total=capacity;*free_bytes=capacity-used;}return e;}
 static int millis(lua_State *L){lua_pushinteger(L,esp_timer_get_time()/1000);return 1;}
 static int info(lua_State *L){lua_newtable(L);lua_pushinteger(L,heap_caps_get_free_size(MALLOC_CAP_INTERNAL));lua_setfield(L,-2,"sram_free");lua_pushinteger(L,heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));lua_setfield(L,-2,"sram_largest");lua_pushinteger(L,heap_caps_get_free_size(MALLOC_CAP_SPIRAM));lua_setfield(L,-2,"psram_free");return 1;}
-static int open_system(lua_State *L){luaL_Reg r[]={{"millis",millis},{"info",info},{NULL,NULL}};luaL_newlib(L,r);return 1;}
+/* Diagnostics are live snapshots shared by the UI, worker and USB tasks.
+ * Writing them to flash during a scan can stall flash-backed drawing. */
+static const char *const status_names[] = {
+    "ui-status.json", "launch-status.json", "connection-status.json",
+};
+static EXT_RAM_BSS_ATTR struct {
+    size_t length;
+    char data[2049];
+} status_slots[sizeof(status_names) / sizeof(status_names[0])];
+static portMUX_TYPE status_lock = portMUX_INITIALIZER_UNLOCKED;
+
+static int status_slot(const char *name)
+{
+    for (size_t i = 0; i < sizeof(status_names) / sizeof(status_names[0]); ++i) {
+        if (strcmp(name, status_names[i]) == 0) return (int)i;
+    }
+    return -1;
+}
+
+esp_err_t uv_status_read(const char *name, char *out, size_t capacity)
+{
+    const int slot = status_slot(name);
+    if (slot < 0) return ESP_ERR_INVALID_ARG;
+
+    portENTER_CRITICAL(&status_lock);
+    const size_t length = status_slots[slot].length;
+    esp_err_t error = ESP_ERR_NOT_FOUND;
+    if (length) {
+        error = ESP_ERR_INVALID_SIZE;
+        if (length < capacity) {
+            memcpy(out, status_slots[slot].data, length + 1);
+            error = ESP_OK;
+        }
+    }
+    portEXIT_CRITICAL(&status_lock);
+    return error;
+}
+
+static int publish_status(lua_State *L)
+{
+    const int slot = status_slot(luaL_checkstring(L, 1));
+    luaL_argcheck(L, slot >= 0, 1, "unknown diagnostic status");
+    size_t length;
+    const char *data = luaL_checklstring(L, 2, &length);
+    luaL_argcheck(L, length > 0 && length < sizeof(status_slots[0].data) &&
+                  !memchr(data, 0, length), 2, "invalid diagnostic payload");
+
+    portENTER_CRITICAL(&status_lock);
+    memcpy(status_slots[slot].data, data, length + 1);
+    status_slots[slot].length = length;
+    portEXIT_CRITICAL(&status_lock);
+    return 0;
+}
+
+static int open_system(lua_State *L){luaL_Reg r[]={{"millis",millis},{"info",info},{"publish_status",publish_status},{NULL,NULL}};luaL_newlib(L,r);return 1;}
 char *uv_encode(lua_State *L,int index){index=lua_absindex(L,index);luaL_requiref(L,"json",luaopen_json,0);lua_getfield(L,-1,"encode");lua_pushvalue(L,index);lua_call(L,1,1);const char *value=luaL_checkstring(L,-1);char *copy=strdup(value);lua_pop(L,2);return copy;}
 void uv_decode(lua_State *L,const char *data){luaL_requiref(L,"json",luaopen_json,0);lua_getfield(L,-1,"decode");lua_pushstring(L,data);lua_call(L,1,1);lua_remove(L,-2);}
 static const char *field(lua_State *L,int index,const char *name){lua_getfield(L,index,name);const char *v=lua_tostring(L,-1);lua_pop(L,1);return v;}

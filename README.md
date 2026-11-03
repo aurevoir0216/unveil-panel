@@ -44,4 +44,4 @@ python mosaico.py iris system-update --bundle /path/to/unveil-mosaico-idea.irisf
 
 当前维护 **Idea 版**。它保留 Vibe Mode，并在开机时直接进入控制面板。设备构建需要 ESP32-S31 工具链和固定版本的 ESP-IDF。编译与安装包说明见 [Idea 工程](firmware/mosaico-idea/README.md)。
 
-旧桌面版和全盘独立版归档在 [固件目录](firmware/README.md)。
+Release 只提供 Idea 安装包。**旧桌面版和全盘独立版已废弃**，源码留在 [固件归档](firmware/README.md)。

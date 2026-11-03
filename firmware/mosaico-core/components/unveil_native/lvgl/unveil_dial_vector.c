@@ -1,6 +1,7 @@
-/* LVGL vector paths only: no source images, pixel buffers or asset reads. */
+/* LVGL vector paths are the source of the dial, including its motion surface. */
 #include "unveil_dial_vector.h"
 #include "unveil_dial_mapping.h"
+#include "src/draw/snapshot/lv_snapshot.h"
 #include <math.h>
 #include <string.h>
 #define UV_DIAL_MAGIC 0x55445631u
@@ -17,7 +18,12 @@ typedef struct {
     lv_area_t offset;
     int q,level;
 } uv_dial_sector_t;
-typedef struct { uint32_t magic; uv_dial_sector_t *sector[3]; } uv_dial_vector_t;
+typedef struct {
+    uint32_t magic;
+    uv_dial_sector_t *sector[3];
+    lv_draw_buf_t *motion_surface;
+    bool paging, preparing, motion_ready;
+} uv_dial_vector_t;
 static lv_fpoint_t polar(float r,float a)
 {
     return (lv_fpoint_t){UV_DIAL_LOCAL_CENTER+r*cosf(a),UV_DIAL_LOCAL_CENTER+r*sinf(a)};
@@ -98,6 +104,8 @@ static void sector_event(lv_event_t *e)
         lv_free(d);return;
     }
     if(lv_event_get_code(e)!=LV_EVENT_DRAW_MAIN)return;
+    uv_dial_vector_t *dial=lv_obj_get_user_data(lv_obj_get_parent(d->obj));
+    if(dial && dial->paging && dial->motion_ready)return;
     lv_layer_t *layer=lv_event_get_layer(e);lv_area_t box;lv_obj_get_coords(d->obj,&box);
     lv_area_t saved_clip=layer->_clip_area,clip;
     if(!clip_box(&clip,&saved_clip,&box))return;
@@ -112,10 +120,33 @@ static void sector_event(lv_event_t *e)
     if(d->level&&d->fill[d->level-1])color_path(v,layer,&origin,d->fill[d->level-1],0xdcd5e0);
     lv_draw_vector(v);lv_draw_vector_dsc_delete(v);layer->_clip_area=saved_clip;
 }
-static void root_deleted(lv_event_t *e)
+static void root_event(lv_event_t *e)
 {
-    lv_obj_set_user_data(lv_event_get_target(e),NULL);
-    lv_free(lv_event_get_user_data(e));
+    uv_dial_vector_t *dial=lv_event_get_user_data(e);
+    lv_obj_t *obj=lv_event_get_target(e);
+    if(lv_event_get_code(e)==LV_EVENT_DELETE){
+        if(dial->motion_surface)lv_draw_buf_destroy(dial->motion_surface);
+        lv_obj_set_user_data(obj,NULL);
+        lv_free(dial);
+        return;
+    }
+    lv_layer_t *layer=lv_event_get_layer(e);
+    lv_area_t bounds;
+    lv_obj_get_coords(obj,&bounds);
+    if(dial->preparing){
+        /* Render against the actual theme so anti-aliased edges match the
+         * live vectors when the buffer is moved across the page. */
+        lv_draw_rect_dsc_t background;
+        lv_draw_rect_dsc_init(&background);
+        background.bg_color=lv_obj_get_style_bg_color(lv_obj_get_parent(obj),LV_PART_MAIN);
+        background.bg_opa=LV_OPA_COVER;
+        lv_draw_rect(layer,&background,&bounds);
+    }else if(dial->paging && dial->motion_ready){
+        lv_draw_image_dsc_t image;
+        lv_draw_image_dsc_init(&image);
+        image.src=dial->motion_surface;
+        lv_draw_image(layer,&image,&bounds);
+    }
 }
 bool unveil_dial_vector_attach(lv_obj_t *obj)
 {
@@ -123,7 +154,8 @@ bool unveil_dial_vector_attach(lv_obj_t *obj)
     uv_dial_vector_t *d=lv_malloc_zeroed(sizeof(*d));if(!d)return false;
     d->magic=UV_DIAL_MAGIC;lv_obj_set_user_data(obj,d);
     lv_obj_remove_flag(obj,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(obj,root_deleted,LV_EVENT_DELETE,d);
+    lv_obj_add_event_cb(obj,root_event,LV_EVENT_DELETE,d);
+    lv_obj_add_event_cb(obj,root_event,LV_EVENT_DRAW_MAIN,d);
     for(int q=0;q<3;++q){
         uv_dial_sector_t *sector=lv_malloc_zeroed(sizeof(*sector));
         if(!sector)return false;
@@ -175,9 +207,26 @@ bool unveil_dial_vector_set(lv_obj_t *obj,const int levels[3])
     for(int q=0;q<3;++q){
         uv_dial_sector_t *sector=d->sector[q];
         if(sector->level==levels[q])continue;
-        int old=sector->level;sector->level=levels[q];
+        int old=sector->level;sector->level=levels[q];d->motion_ready=false;
         if(!old)lv_obj_invalidate(sector->obj);
         else invalidate_band(sector,q,level_radius(q,old),level_radius(q,levels[q]),old==counts[q]||(q==2&&old==1),levels[q]==counts[q]||(q==2&&levels[q]==1));
     }
     return true;
+}
+
+void unveil_dial_vector_paging(lv_obj_t *obj,bool active)
+{
+    uv_dial_vector_t *dial=lv_obj_get_user_data(obj);
+    if(dial && dial->magic==UV_DIAL_MAGIC)dial->paging=active;
+}
+
+void unveil_dial_vector_prepare_motion(lv_obj_t *obj)
+{
+    uv_dial_vector_t *dial=lv_obj_get_user_data(obj);
+    if(!dial || dial->magic!=UV_DIAL_MAGIC || dial->paging || dial->motion_ready)return;
+    if(!dial->motion_surface)dial->motion_surface=lv_snapshot_create_draw_buf(obj,LV_COLOR_FORMAT_RGB565);
+    if(!dial->motion_surface)return;
+    dial->preparing=true;
+    dial->motion_ready=lv_snapshot_take_to_draw_buf(obj,LV_COLOR_FORMAT_RGB565,dial->motion_surface)==LV_RESULT_OK;
+    dial->preparing=false;
 }

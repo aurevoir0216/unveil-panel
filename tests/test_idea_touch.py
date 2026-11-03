@@ -10,7 +10,8 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[1]
 adapter = repo / 'firmware/mosaico/components/esp_lvgl_present'
-display = (repo / 'firmware/mosaico-core/components/unveil_native/uv_display.c').read_text()
+native = repo / 'firmware/mosaico-core/components/unveil_native'
+display = (native / 'uv_display.c').read_text()
 start = display.index('static esp_err_t read_touch(')
 end = display.index('\nstatic void observe_region(', start)
 callback = display[start:end]
@@ -80,6 +81,7 @@ esp_err_t esp_lv_adapter_unregister_input_device(lv_indev_t *);
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "unveil_dial_mapping.h"
 static bool injected_pressed,physical_pressed;
 static uint16_t injected_x,injected_y,physical_x,physical_y;
 static int64_t last_physical_touch,injection_time;
@@ -113,7 +115,22 @@ static void sample(lv_indev_t *input,bool pressed,int x,int y){
  assert(data.state==(pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED));
  assert(data.point.x==x&&data.point.y==y);
 }
+static void test_dial_overdrag(void){
+ const float rays[][2]={{0,-1},{-.8660254f,.5f},{.8660254f,.5f}};
+ const int counts[]={3,5,6};
+ for(int q=0;q<3;++q){
+  const float x=rays[q][0],y=rays[q][1],start=120;
+  for(int i=0;i<counts[q];++i){
+   const float radius=UV_DIAL_INNER_RADIUS+(i+.5f)*(UV_DIAL_OUTER_RADIUS-UV_DIAL_INNER_RADIUS)/counts[q];
+   assert(uv_dial_index_from_radius(uv_dial_drag_radius(x*radius,y*radius,x*start,y*start,start),counts[q])==i+1);
+  }
+  assert(uv_dial_index_from_radius(uv_dial_drag_radius(-x*190,-y*190,x*start,y*start,start),counts[q])==1);
+  assert(uv_dial_index_from_radius(uv_dial_drag_radius(x*190,y*190,x*start,y*start,start),counts[q])==counts[q]);
+  assert(fabsf(uv_dial_drag_radius(x*start-y*200,y*start+x*200,x*start,y*start,start)-start)<.01f);
+ }
+}
 int main(void){
+ test_dial_overdrag();
  lv_display_t screen={0};esp_lv_adapter_touch_config_t config={.disp=&screen,.handle=&screen,
  .scale={.x=1,.y=1},.callbacks={.custom_touch_read=read_touch}};
  lv_indev_t *input=esp_lv_adapter_register_touch(&config);assert(input);
@@ -141,13 +158,13 @@ int main(void){
  controller_error=ESP_ERR_TIMEOUT;controller_count=0;input->read_cb(input,&data);
  assert(data.state==LV_INDEV_STATE_RELEASED&&data.point.x==220&&data.point.y==120);
  assert(esp_lv_adapter_unregister_touch(input)==ESP_OK);
- puts("IDEA_TOUCH_OK physical-zero-point-release, button-grid, drag-release, idle-IRQ, USB-release, physical-priority, read-error");
+ puts("IDEA_TOUCH_OK physical-zero-point-release, button-grid, drag-release, idle-IRQ, USB-release, physical-priority, read-error, dial-overdrag");
  return 0;
 }
 '''
     (work / 'harness.c').write_text(harness)
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I'+str(work),
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I'+str(work), '-I'+str(native / 'lvgl'),
                     '-I'+str(adapter / 'include'), str(work / 'harness.c'),
                     str(adapter / 'src/input/esp_lv_adapter_input_touch.c'),
-                    '-o', str(work / 'touch-test')], check=True)
+                    '-lm', '-o', str(work / 'touch-test')], check=True)
     subprocess.run([str(work / 'touch-test')], check=True)

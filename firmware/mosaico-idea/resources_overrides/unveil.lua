@@ -96,7 +96,7 @@ local persistence=dofile(scripts..'/persistence.lua').new(scripts..'/persist_wor
 local function save() cfg.mode=cfg.analysis_seconds==0 and 'collect' or 'scan';persistence:set('config.json',json.encode(cfg),40) end
 local last_health
 local function health(v)
- local data=json.encode(v);if data~=last_health then persistence:set('ui-status.json',data,750);last_health=data end
+ local data=json.encode(v);if data~=last_health then pcall(system.publish_status,'ui-status.json',data);last_health=data end
 end
 local function active()
  local good,info=thread.get(job)
@@ -186,6 +186,7 @@ local function back()
 local function row(parent,title,value,y,fn,height)
  local h=height or 76
  local b=box(parent,24,y,432,h,C.bg,0)
+ b:set_style({bg_opa=0})
  local rule=lvgl.line(b,{points={{x=0,y=h-1},{x=432,y=h-1}},line_color=C.line,line_width=1});rule:clear_flag('CLICKABLE')
  local title_label=text(b,title,0,math.floor((h-40)/2),255,40,F.body)
  local value_label
@@ -369,7 +370,7 @@ paint_history=function(parent,shell_only)
    parent:clean();local ui={parent=parent,rows={},count=0};history_ui=ui
    ui.sort=box(parent,162,48,156,38,C.card,19);ui.sort:add_flag('CLICKABLE');lvgl.guard_tap(ui.sort,18)
    ui.title=center(ui.sort,'',0,F.tabs,C.fg);ui.title:align('center',0,0)
-   ui.list=lvgl.object(parent,{x=0,y=100,w=468,h=334,pad=0,radius=0,bg_color=C.bg,border_width=0})
+   ui.list=lvgl.object(parent,{x=0,y=100,w=468,h=334,pad=0,radius=0,bg_opa=0,border_width=0})
    ui.list:add_flag('SCROLLABLE');ui.list:set_scroll({dir='ver',scrollbar='auto'})
    ui.spacer=box(ui.list,0,0,1,1,C.bg);ui.spacer:set_style({bg_opa=0})
    ui.empty=center(parent,tr('暂无记录','No records'),220,F.body,C.muted)
@@ -414,7 +415,7 @@ local function paint_primary(parent,index)
  if index==3 then details_signature=nil;paint_details(parent);return end
  if index==4 then paint_history(parent,false);return end
  head(parent,tr('系统','System'))
- local list=lvgl.object(parent,{x=0,y=86,w=468,h=348,pad=0,radius=0,bg_color=C.bg,border_width=0})
+ local list=lvgl.object(parent,{x=0,y=86,w=468,h=348,pad=0,radius=0,bg_opa=0,border_width=0})
  list:add_flag('SCROLLABLE');list:set_scroll({dir='ver',scrollbar='auto'})
  do
   local function system_row(title,value,y,fn) local b,l=row(list,title,value,y-86,fn,64);if l then system_values[y]=l end;return b end
@@ -513,17 +514,32 @@ local function build_primary()
  C=cfg.dark and {bg='#000000',fg='#eef0f4',muted='#b5bdca',line='#5b6370',orange='#f54b2c',card='#343940'} or {bg='#e1e1e6',fg='#292c33',muted='#59616e',line='#b0b5be',orange='#ed4a2e',card='#f4f2f4'}
  screen:set_style({bg_color=C.bg,pad=0})
  localized_labels={};home=nil;system_values={};history_ui=nil;details_ui=nil;history_signature=nil;history_parent=nil;details_signature=nil;connection_label=nil;overlay=nil;overlay_pager=nil;last_signature=nil
- primary_pager=lvgl.tileview(screen,{x=0,y=0,w=480,h=440,pad=0,border_width=0,bg_color=C.bg})
+ -- The fixed header and footer stay outside the dirty area of each slide.
+ local header_height=32
+ primary_pager=lvgl.tileview(screen,{x=0,y=header_height,w=480,h=440-header_height,pad=0,border_width=0,bg_color=C.bg})
  primary_pager:set_scroll({dir='hor',scrollbar='off',snap_x='center',snap_y='center'})
  if primary_pager.pager_motion then primary_pager:pager_motion() end
- pcall(function() primary_pager:on('scroll_begin',function() paging=true;if lvgl.render_stats then lvgl.render_stats(true) end; end) end)
- pcall(function() primary_pager:on('scroll_end',function() paging=false;if lvgl.render_stats then local p=lvgl.render_stats(true);print(string.format('Unveil paging frames=%d mean_us=%d max_us=%d elapsed_ms=%d',p.frames,p.mean_us,p.max_us,p.elapsed_ms)) end;last_signature=nil;refresh() end) end)
+ pcall(function() primary_pager:on('scroll_begin',function()
+  paging=true
+  if settings_controller then settings_controller:paging(true) end
+  if lvgl.render_stats then lvgl.render_stats(true) end
+ end) end)
+ pcall(function() primary_pager:on('scroll_end',function()
+  paging=false
+  if settings_controller then settings_controller:paging(false) end
+  if lvgl.render_stats then
+   local p=lvgl.render_stats(true)
+   print(string.format('Unveil paging frames=%d mean_us=%d max_us=%d elapsed_ms=%d tx_frames=%d tx_max_rows=%d dma_frames=%d dma_max_gap_us=%d dma_late=%d dma_span_us=%d',p.frames,p.mean_us,p.max_us,p.elapsed_ms,p.tx_frames,p.tx_max_rows,p.dma_frames,p.dma_max_gap_us,p.dma_late_frames,p.dma_span_us))
+  end
+  last_signature=nil;refresh()
+ end) end)
  pager=primary_pager;primary_tiles={}
  local this_pager=primary_pager
  for i=1,5 do
   local tile=primary_pager:add_tile(i,1,i==1 and 'right' or i==5 and 'left' or 'hor')
-  tile:set_style({bg_color=C.bg,pad=0,border_width=0});tile:clear_flag('SCROLLABLE')
-  local content=box(tile,0,0,480,480,C.bg);primary_tiles[i]=content;paint_primary(content,i)
+  tile:set_style({bg_opa=0,pad=0,border_width=0});tile:clear_flag('SCROLLABLE')
+  local content=box(tile,0,-header_height,480,480,C.bg)
+  content:set_style({bg_opa=0});primary_tiles[i]=content;paint_primary(content,i)
  end
  primary_pager:set_tile_by_index(page,1,false)
  primary_pager:on('value_changed',function()
@@ -576,7 +592,7 @@ local function render()
  print('Unveil UI page='..page..' sub='..(sub and sub.kind or 'none')..' rebuild='..tostring(rebuilding)..' update_ms='..(system.millis()-started))
 end
 local function startup_stage(phase)
- local i=system.info and system.info() or {};pcall(storage.write_file,app..'/launch-status.json',json.encode({phase=phase,sram_free=i.sram_free,sram_largest=i.sram_largest,psram_free=i.psram_free}))
+ local i=system.info and system.info() or {};pcall(system.publish_status,'launch-status.json',json.encode({phase=phase,sram_free=i.sram_free,sram_largest=i.sram_largest,psram_free=i.psram_free}))
 end
 local function run()
  startup_stage('before_init');lvgl.init({hold_first_frame=true,unveil_input=true});owned=true;if lvgl.chart_clear then lvgl.chart_clear() end
@@ -657,7 +673,7 @@ local function run()
    print('Unveil top-key home scan='..tostring(started)..' running='..tostring(state.running))
    if started then next_poll=now+500 end
   end
-  if (not history_loaded or page==4) and not sub and now>=history_next_poll then request_history() end
+  if not paging and (not history_loaded or page==4) and not sub and now>=history_next_poll then request_history() end
   if page==1 and chart_prepare_job==state.job and chart_prepare_progress<1 and now>=chart_retry_at then
    local ok,info=thread.get('unveil_chart');local status=ok and info:match('status=(%w+)');if status~='running' and status~='queued' then chart_retry_at=now+5000;request_chart(nil,nil,state.job) end
   end
@@ -686,7 +702,8 @@ local function run()
   end
   if completion:pending() then
    local eligible=session_started and state.online and not state.running and display_percent()==100 and (state.state=='safe' or state.state=='alert' or state.state=='saved') and not (chart_prepare_job==state.job and chart_prepare_progress<1)
-   completion:tick(state.job,eligible,page==1 and not sub and not paging,lvgl.render_stats(false).frame_sequence)
+   local p=lvgl.present_status()
+   completion:tick(state.job,eligible,page==1 and not sub and not paging,p.ok and p.sequence or 0,p.submitted,p.presented)
   end
   haptics:tick()
   persistence:tick(now)
@@ -696,7 +713,10 @@ local function run()
    local perf=lvgl.render_stats(true)
    if perf.frames>1 then print(string.format('Unveil render frames=%d mean_us=%d max_us=%d elapsed_ms=%d acquire_us=%d submit_us=%d commit_us=%d tx_bytes=%d tx_frames=%d rows=%d-%d dma_wait_us=%d te_wait_us=%d',perf.frames,perf.mean_us,perf.max_us,perf.elapsed_ms,perf.acquire_us,perf.submit_us,perf.commit_us,perf.tx_bytes,perf.tx_frames,perf.tx_min_rows,perf.tx_max_rows,perf.dma_wait_us,perf.te_wait_us)) end
   end
-  if settings_controller then settings_controller:flush(now,false) end
+  if settings_controller then
+   settings_controller:flush(now,false)
+   if not paging then settings_controller:prepare_motion(now) end
+  end
   if queued_command and now>=next_command_check then
    next_command_check=now+200
    if not active() then pending=false;start(queued_command);next_poll=now+2500 end

@@ -1,4 +1,4 @@
--- LVGL vector paths: no generated sprites or image buffers.
+-- LVGL paths provide live detent updates and the settled surface for paging.
 local lvgl=require('lvgl')
 local M={}
 function M.new(parent,dark)
@@ -9,8 +9,13 @@ function M.new(parent,dark)
  function self:draw()
   if self.shown[1]==self.levels[1] and self.shown[2]==self.levels[2] and self.shown[3]==self.levels[3] then return end
   self.surface:dial_values(self.levels[1],self.levels[2],self.levels[3])
+  self.motion_pending=true
   for q=1,3 do self.shown[q]=self.levels[q] end
  end
+ function self:prepare_motion()
+  if self.motion_pending then self.surface:dial_motion();self.motion_pending=false end
+ end
+ function self:paging(active) self.surface:dial_motion(active) end
  return self
 end
 return M

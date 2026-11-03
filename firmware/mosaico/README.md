@@ -1,6 +1,8 @@
 # Unveil Desktop for Mosaico
 
-This is the Mosaico framework version. It boots the original desktop, adds a round Unveil icon and starts the application through the existing lifecycle. It is not the independent firmware.
+> **Discontinued.** This directory preserves the Desktop distribution. Current releases distribute the [Idea firmware](../mosaico-idea/).
+
+This distribution booted the Mosaico desktop and opened Unveil from its application list.
 
 ## Build
 
@@ -17,9 +19,9 @@ idf.py -B build-desktop -DESP_MOSAICO_BUILD_PROFILE=profiles/desktop.cmake build
 
 UNVEIL_DISTRIBUTION defaults to desktop. The old dedicated entry remains for legacy source reproduction, but is not a new distribution choice.
 
-## Installation
+## Historical installation
 
-The desktop ZIP includes a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow. The normal desktop firmware installs its embedded Unveil app resources into NAND before launcher enumeration, without overwriting config.json. On normal boot, open the round Unveil icon from the Mosaico desktop.
+The archived Desktop ZIP included a normal-app .irisfw with matching app, graphics and system resources. Use the compatible Vibe Mode update workflow. The normal desktop firmware installs its embedded Unveil app resources into NAND before launcher enumeration, without overwriting config.json. On normal boot, open the round Unveil icon from the Mosaico desktop.
 
 When switching from Idea, Vibe Mode 0.2.1 may report the old app partition size during its final boot selection. If the updater confirms the new partition table was committed and the only error is validation against the old 4 MiB partition, restart once to load the committed layout. Keep the device powered while it writes.
 
@@ -35,4 +37,4 @@ Do not treat generic native full-flash arguments as a normal app update: they co
 
 Primary-page upward swipes return to Mosaico; secondary upward swipes return inside Unveil. Top-button scanning applies only while Unveil is active; original Mosaico behavior remains outside it.
 
-releases/2026-11-03/unveil-mosaico.bin and snapshot.json retain the old v0.10/v0.11 dedicated-framework binary for provenance. New desktop binaries are separate multi-distribution release artifacts.
+releases/2026-11-03/unveil-mosaico.bin and snapshot.json retain the old v0.10/v0.11 dedicated-framework binary for provenance.

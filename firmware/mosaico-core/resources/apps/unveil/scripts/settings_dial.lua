@@ -10,6 +10,8 @@ function M.new(parent,cfg,F,C,tr,save,localize_label)
  local adjusters={}
  function self:flush(now,force) if self.pending and (force or now-self.changed>1200) then save();self.pending=false end end
  local function changed() self.pending=true;self.changed=system.millis() end
+ function self:prepare_motion(now) if now-self.changed>=200 then renderer:prepare_motion() end end
+ function self:paging(active) renderer:paging(active) end
  local function label(s,x,y,font,color)
   local l=inert(lvgl.label(parent,{text=s,font=font,text_color=color}));if localize_label then localize_label(l,s) end;l:align('top_mid',x-240,y);return l
  end

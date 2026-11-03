@@ -34,6 +34,7 @@ static const luaL_Reg lua_lvgl_base_methods[] = {
     {"invalidate",lua_lvgl_invalidate},
     {"dial_init",lua_lvgl_dial_init},
     {"dial_values",lua_lvgl_dial_values},
+    {"dial_motion",lua_lvgl_dial_motion},
     {"radial_input",lua_lvgl_radial_input},
     {"radial_value",lua_lvgl_radial_value},
     {"set_pos", lua_lvgl_set_pos},

@@ -46,9 +46,12 @@ static int lua_lvgl_render_stats(lua_State *L)
     if (reset) { memset(&s_render_stats, 0, sizeof(s_render_stats)); s_render_stats.window_start = now; }
     extern void unveil_present_profile(uint64_t out[6],bool reset);
     extern void unveil_te_profile(uint64_t out[6],bool reset);
+    extern void unveil_te_scanout_profile(uint64_t out[4], bool reset) __attribute__((weak));
     uint64_t present[6],tx[6];unveil_present_profile(present,reset);unveil_te_profile(tx,reset);
+    uint64_t scanout[4] = {0};
+    if (unveil_te_scanout_profile) unveil_te_scanout_profile(scanout, reset);
     lua_lvgl_unlock();
-    lua_createtable(L, 0, 17);
+    lua_createtable(L, 0, 21);
     lua_pushinteger(L, s_frame_sequence); lua_setfield(L, -2, "frame_sequence");
     lua_pushinteger(L, frames); lua_setfield(L, -2, "frames");
     lua_pushinteger(L, frames ? total / frames : 0); lua_setfield(L, -2, "mean_us");
@@ -57,6 +60,11 @@ static int lua_lvgl_render_stats(lua_State *L)
     const char *present_names[]={"acquire_us","submit_us","commit_us","flush_pixels","flush_regions","present_frames"};
     const char *tx_names[]={"tx_frames","tx_bytes","dma_wait_us","te_wait_us","tx_min_rows","tx_max_rows"};
     for(int i=0;i<6;++i){lua_pushinteger(L,present[i]);lua_setfield(L,-2,present_names[i]);lua_pushinteger(L,tx[i]);lua_setfield(L,-2,tx_names[i]);}
+    const char *scanout_names[] = {"dma_frames", "dma_max_gap_us", "dma_late_frames", "dma_span_us"};
+    for (int i = 0; i < 4; ++i) {
+        lua_pushinteger(L, scanout[i]);
+        lua_setfield(L, -2, scanout_names[i]);
+    }
     return 1;
 }
 

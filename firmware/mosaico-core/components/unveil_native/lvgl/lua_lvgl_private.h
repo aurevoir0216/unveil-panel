@@ -511,6 +511,7 @@ int lua_lvgl_scan_key(lua_State *L);
 int lua_lvgl_pager_motion(lua_State *L);
 int lua_lvgl_dial_init(lua_State *L);
 int lua_lvgl_dial_values(lua_State *L);
+int lua_lvgl_dial_motion(lua_State *L);
 int lua_lvgl_radial_input(lua_State *L);
 int lua_lvgl_radial_value(lua_State *L);
 
