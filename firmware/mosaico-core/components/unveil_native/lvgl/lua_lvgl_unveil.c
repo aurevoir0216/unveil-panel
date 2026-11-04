@@ -337,11 +337,18 @@ int lua_lvgl_keyboard_set_palette(lua_State *L)
     uint32_t bg=luaL_checkinteger(L,2),card=luaL_checkinteger(L,3),fg=luaL_checkinteger(L,4),accent=luaL_checkinteger(L,5);
     lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_KEYBOARD);
     lv_obj_set_style_bg_color(obj,lv_color_hex(bg),0);lv_obj_set_style_pad_all(obj,3,0);
-    lv_obj_set_style_text_font(obj,lv_obj_get_style_text_font(obj,0),LV_PART_ITEMS);
+    /* The keyboard map uses LV_SYMBOL_* glyphs from the built-in font. */
+#if LV_FONT_MONTSERRAT_18
+    lv_obj_set_style_text_font(obj,&lv_font_montserrat_18,LV_PART_ITEMS);
+#else
+    lv_obj_set_style_text_font(obj,LV_FONT_DEFAULT,LV_PART_ITEMS);
+#endif
     lv_obj_set_style_bg_color(obj,lv_color_hex(card),LV_PART_ITEMS);lv_obj_set_style_text_color(obj,lv_color_hex(fg),LV_PART_ITEMS);
+    lv_obj_set_style_bg_color(obj,lv_color_hex(card),LV_PART_ITEMS|LV_STATE_CHECKED);
     lv_obj_set_style_border_width(obj,0,LV_PART_ITEMS);lv_obj_set_style_radius(obj,6,LV_PART_ITEMS);
     lv_obj_set_style_bg_color(obj,lv_color_hex(accent),LV_PART_ITEMS|LV_STATE_PRESSED);
     lv_obj_set_style_text_color(obj,lv_color_hex(0x171619),LV_PART_ITEMS|LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(obj,lv_color_hex(accent),LV_PART_ITEMS|LV_STATE_CHECKED|LV_STATE_PRESSED);
     lua_lvgl_unlock();return 0;
 }
 
@@ -450,8 +457,10 @@ int lua_lvgl_label_center_ink(lua_State *L)
 /* LVGL vector widget bindings. */
 int lua_lvgl_dial_init(lua_State *L)
 {
+    bool dark=lua_isnoneornil(L,2)||lua_toboolean(L,2);
+    uint32_t light_fill=luaL_optinteger(L,3,0x59616e);
     lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_GENERIC);
-    bool ok=unveil_dial_vector_attach(obj);lua_lvgl_unlock();if(!ok)return luaL_error(L,"vector dial initialization failed");return 0;
+    bool ok=unveil_dial_vector_attach(obj,dark,light_fill);lua_lvgl_unlock();if(!ok)return luaL_error(L,"vector dial initialization failed");return 0;
 }
 int lua_lvgl_dial_values(lua_State *L)
 {
@@ -467,8 +476,13 @@ int lua_lvgl_dial_motion(lua_State *L)
     const bool active=lua_toboolean(L,2);
     lua_lvgl_obj_ud_t *ud=lua_lvgl_check_ud(L,1);
     lv_obj_t *obj=lua_lvgl_lock_widget(L,ud,LUA_LVGL_OBJ_GENERIC);
-    if(prepare)unveil_dial_vector_prepare_motion(obj);
-    else unveil_dial_vector_paging(obj,active);
+    if(prepare){
+        bool finished=unveil_dial_vector_prepare_motion(obj);
+        lua_lvgl_unlock();
+        lua_pushboolean(L,finished);
+        return 1;
+    }
+    unveil_dial_vector_paging(obj,active);
     lua_lvgl_unlock();
     return 0;
 }

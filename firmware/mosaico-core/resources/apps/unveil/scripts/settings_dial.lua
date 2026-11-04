@@ -6,7 +6,7 @@ local M={}
 local function inert(o) o:clear_flag('CLICKABLE');o:clear_flag('SCROLLABLE');return o end
 function M.new(parent,cfg,F,C,tr,save,localize_label)
  local self={pending=false,changed=0}
- local renderer=Render.new(parent,C.bg=='#000000')
+ local renderer=Render.new(parent,cfg.dark,C.muted)
  local adjusters={}
  function self:flush(now,force) if self.pending and (force or now-self.changed>1200) then save();self.pending=false end end
  local function changed() self.pending=true;self.changed=system.millis() end
@@ -26,7 +26,7 @@ function M.new(parent,cfg,F,C,tr,save,localize_label)
    renderer:set(q,index)
   end
   fill()
-  label(p.title,p.lx,p.ly,F.dialLabel,'#171619')
+  label(p.title,p.lx,p.ly,F.dialLabel,cfg.dark and '#171619' or C.fg)
   local value=label(string.format('%g',p.values[index]),p.x,p.y,F.dial,C.orange)
   local unit=q~=1 and label('s',p.x,p.y+30,F.micro,C.orange) or nil
   local function position_unit()

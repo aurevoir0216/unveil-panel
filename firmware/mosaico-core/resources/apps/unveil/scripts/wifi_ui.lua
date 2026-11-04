@@ -68,18 +68,19 @@ function M.new(parent,F,C,tr)
  end
  render_password=function(ap)
   self.stage='password';self.target=ap;content:clean()
-  text(content,ap.ssid,24,0,432,72,self.font)
-  local input=lvgl.textarea(content,{x=24,y=78,w=432,h=42,one_line=true,password=true,max_length=64,placeholder=tr('密码','Password'),font=F.small,bg_color=C.card,text_color=C.fg,border_width=1,border_color=C.line,pad=5,radius=8})
-  local keyboard=lvgl.keyboard(content,{x=12,y=126,w=456,h=144,textarea=input,font=F.status,popovers=false})
+  text(content,short(ap.ssid),24,0,432,42,self.font)
+  local input=lvgl.textarea(content,{x=24,y=48,w=432,h=44,one_line=true,password=true,max_length=64,placeholder=tr('密码','Password'),font=F.small,bg_color=C.card,text_color=C.fg,border_width=1,border_color=C.line,pad=5,radius=8})
+  local keyboard=lvgl.keyboard(content,{align='top_left',x=12,y=100,w=456,h=184,textarea=input,popovers=false})
   if keyboard.set_palette then keyboard:set_palette(tonumber(C.bg:sub(2),16),tonumber(C.card:sub(2),16),tonumber(C.fg:sub(2),16),tonumber(C.orange:sub(2),16)) end
-  self.error=text(content,'',24,274,432,18,F.micro,C.orange)
+  self.error=text(content,'',24,286,432,18,F.micro,C.orange)
   local function submit()
    local password=input.get_text and input:get_text() or ''
    if password=='' and self.status.ssid~=ap.ssid then self.error:set_text(tr('输入密码','Password'));return end
    join(ap,password~='' and password or nil)
   end
-  button(content,tr('连接','JOIN'),150,296,180,42,submit,true)
-  keyboard:on('ready',submit)
+  button(content,tr('连接','JOIN'),150,304,180,36,submit,true)
+  input:on('ready',submit)
+  keyboard:on('cancel',render_list)
   input:on('value_changed',function() if self.error and self.error:is_valid() then self.error:set_text('') end end)
  end
  update_list=function()

@@ -1,10 +1,10 @@
 -- LVGL paths provide live detent updates and the settled surface for paging.
 local lvgl=require('lvgl')
 local M={}
-function M.new(parent,dark)
+function M.new(parent,dark,muted)
  local self={levels={1,1,1},shown={}}
  self.surface=lvgl.object(parent,{x=65,y=65,w=350,h=350,bg_opa=0,border_width=0,pad=0,radius=0})
- self.surface:dial_init()
+ self.surface:dial_init(dark,tonumber(muted:sub(2),16))
  function self:set(q,index) self.levels[q]=index end
  function self:draw()
   if self.shown[1]==self.levels[1] and self.shown[2]==self.levels[2] and self.shown[3]==self.levels[3] then return end
@@ -13,7 +13,7 @@ function M.new(parent,dark)
   for q=1,3 do self.shown[q]=self.levels[q] end
  end
  function self:prepare_motion()
-  if self.motion_pending then self.surface:dial_motion();self.motion_pending=false end
+  if self.motion_pending and self.surface:dial_motion() then self.motion_pending=false end
  end
  function self:paging(active) self.surface:dial_motion(active) end
  return self

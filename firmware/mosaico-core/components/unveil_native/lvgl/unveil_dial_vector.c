@@ -22,6 +22,7 @@ typedef struct {
     uint32_t magic;
     uv_dial_sector_t *sector[3];
     lv_draw_buf_t *motion_surface;
+    uint32_t track_color,fill_color;
     bool paging, preparing, motion_ready;
 } uv_dial_vector_t;
 static lv_fpoint_t polar(float r,float a)
@@ -105,7 +106,7 @@ static void sector_event(lv_event_t *e)
     }
     if(lv_event_get_code(e)!=LV_EVENT_DRAW_MAIN)return;
     uv_dial_vector_t *dial=lv_obj_get_user_data(lv_obj_get_parent(d->obj));
-    if(dial && dial->paging && dial->motion_ready)return;
+    if(!dial || (dial->paging && dial->motion_ready))return;
     lv_layer_t *layer=lv_event_get_layer(e);lv_area_t box;lv_obj_get_coords(d->obj,&box);
     lv_area_t saved_clip=layer->_clip_area,clip;
     if(!clip_box(&clip,&saved_clip,&box))return;
@@ -116,8 +117,8 @@ static void sector_event(lv_event_t *e)
     lv_draw_vector_dsc_translate(v,origin.x1,origin.y1);
     lv_draw_vector_dsc_set_fill_opa(v,LV_OPA_COVER);
     lv_draw_vector_dsc_set_stroke_width(v,0);
-    if(d->level!=counts[d->q])color_path(v,layer,&origin,d->base,0x625e63);
-    if(d->level&&d->fill[d->level-1])color_path(v,layer,&origin,d->fill[d->level-1],0xdcd5e0);
+    if(d->level!=counts[d->q])color_path(v,layer,&origin,d->base,dial->track_color);
+    if(d->level&&d->fill[d->level-1])color_path(v,layer,&origin,d->fill[d->level-1],dial->fill_color);
     lv_draw_vector(v);lv_draw_vector_dsc_delete(v);layer->_clip_area=saved_clip;
 }
 static void root_event(lv_event_t *e)
@@ -148,11 +149,13 @@ static void root_event(lv_event_t *e)
         lv_draw_image(layer,&image,&bounds);
     }
 }
-bool unveil_dial_vector_attach(lv_obj_t *obj)
+bool unveil_dial_vector_attach(lv_obj_t *obj,bool dark,uint32_t light_fill)
 {
     if(lv_obj_get_user_data(obj))return false;
     uv_dial_vector_t *d=lv_malloc_zeroed(sizeof(*d));if(!d)return false;
     d->magic=UV_DIAL_MAGIC;lv_obj_set_user_data(obj,d);
+    d->track_color=dark?0x625e63:0xf4f2f4;
+    d->fill_color=dark?0xdcd5e0:light_fill;
     lv_obj_remove_flag(obj,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(obj,root_event,LV_EVENT_DELETE,d);
     lv_obj_add_event_cb(obj,root_event,LV_EVENT_DRAW_MAIN,d);
@@ -220,13 +223,21 @@ void unveil_dial_vector_paging(lv_obj_t *obj,bool active)
     if(dial && dial->magic==UV_DIAL_MAGIC)dial->paging=active;
 }
 
-void unveil_dial_vector_prepare_motion(lv_obj_t *obj)
+bool unveil_dial_vector_prepare_motion(lv_obj_t *obj)
 {
     uv_dial_vector_t *dial=lv_obj_get_user_data(obj);
-    if(!dial || dial->magic!=UV_DIAL_MAGIC || dial->paging || dial->motion_ready)return;
+    if(!dial || dial->magic!=UV_DIAL_MAGIC || dial->motion_ready)return true;
+    if(dial->paging)return false;
+    /* A snapshot rasterizes every sector while holding the display lock.
+     * Defer it throughout a touch, even if the finger pauses between detents. */
+    for(lv_indev_t *input=lv_indev_get_next(NULL);input;input=lv_indev_get_next(input)){
+        if(lv_indev_get_type(input)==LV_INDEV_TYPE_POINTER &&
+           lv_indev_get_state(input)==LV_INDEV_STATE_PRESSED)return false;
+    }
     if(!dial->motion_surface)dial->motion_surface=lv_snapshot_create_draw_buf(obj,LV_COLOR_FORMAT_RGB565);
-    if(!dial->motion_surface)return;
+    if(!dial->motion_surface)return true;
     dial->preparing=true;
     dial->motion_ready=lv_snapshot_take_to_draw_buf(obj,LV_COLOR_FORMAT_RGB565,dial->motion_surface)==LV_RESULT_OK;
     dial->preparing=false;
+    return true;
 }
